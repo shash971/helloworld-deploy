@@ -2,7 +2,7 @@ import { toast } from "@/hooks/use-toast";
 
 // API base URL
 // Set the API base URL - for development use localhost, for production use relative path
-export const API_BASE_URL = process.env.NODE_ENV === 'production' 
+export const API_BASE_URL = import.meta.env.PROD 
   ? "/api" 
   : "http://127.0.0.1:8000";
 
