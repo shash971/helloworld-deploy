@@ -1,10 +1,8 @@
 import { toast } from "@/hooks/use-toast";
 
 // API base URL
-// Set the API base URL - for development use localhost, for production use relative path
-export const API_BASE_URL = import.meta.env.PROD 
-  ? "/api" 
-  : "http://127.0.0.1:8000";
+// Set the API base URL - adjust this URL to match your backend API
+export const API_BASE_URL = "/api";
 
 // Type for auth response
 export interface AuthResponse {
@@ -21,7 +19,10 @@ export interface UserInfo {
 // Function to perform login and get token
 export async function login(username: string, password: string): Promise<AuthResponse | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    console.log(`Attempting login with username: ${username} to ${API_BASE_URL}/login`);
+    
+    // First attempt with FastAPI standard OAuth format (application/x-www-form-urlencoded)
+    const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -32,8 +33,37 @@ export async function login(username: string, password: string): Promise<AuthRes
       }),
     });
 
+    // If that fails, try a JSON format
+    if (!response.ok && response.status === 415) {
+      console.log("Trying JSON format login...");
+      const jsonResponse = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+      
+      if (!jsonResponse.ok) {
+        console.error("Login failed with JSON format too", jsonResponse.status);
+        throw new Error(`Login failed with status: ${jsonResponse.status}`);
+      }
+      
+      const data: AuthResponse = await jsonResponse.json();
+      
+      // Store token in localStorage
+      localStorage.setItem('jwt_token', data.access_token);
+      localStorage.setItem('token_type', data.token_type);
+      
+      return data;
+    }
+
     if (!response.ok) {
-      throw new Error('Login failed');
+      console.error("Login failed with form-urlencoded format", response.status);
+      throw new Error(`Login failed with status: ${response.status}`);
     }
 
     const data: AuthResponse = await response.json();
