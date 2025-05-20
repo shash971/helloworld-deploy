@@ -1,7 +1,10 @@
 import { toast } from "@/hooks/use-toast";
 
 // API base URL
-export const API_BASE_URL = "http://127.0.0.1:8000";
+// Set the API base URL - for development use localhost, for production use relative path
+export const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? "/api" 
+  : "http://127.0.0.1:8000";
 
 // Type for auth response
 export interface AuthResponse {
