@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { SimpleBarChart, ChartCard } from "@/components/dashboard/chart-card";
 import { ProgressCard, ProgressBar } from "@/components/dashboard/progress-card";
@@ -9,8 +9,62 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { API_BASE_URL, getAuthHeader, isAuthenticated } from "@/lib/auth";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
+  const [, setLocation] = useLocation();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Check authentication and redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setLocation('/role-login');
+    }
+  }, [setLocation]);
+  
+  // Fetch dashboard data from backend
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API_BASE_URL}/dashboard/`, {
+          headers: getAuthHeader()
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setDashboardData(data);
+        } else {
+          console.error('Failed to fetch dashboard data');
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (isAuthenticated()) {
+      fetchDashboardData();
+    }
+  }, []);
+  
+  // Sales summary query
+  const { data: salesData } = useQuery({
+    queryKey: ['/sales/summary'],
+    enabled: isAuthenticated()
+  });
+  
+  // Fetch additional data for other sections as needed
+  const { data: inventoryData } = useQuery({
+    queryKey: ['/inventory/'],
+    enabled: isAuthenticated()
+  });
+  
+  // Mock recent transactions until we have real API data
   const recentTransactions = [
     {
       id: 1,

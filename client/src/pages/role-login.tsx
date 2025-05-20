@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { login, getCurrentUser } from "@/lib/auth";
 
 export default function RoleLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<string>("admin");
+  const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -26,24 +28,44 @@ export default function RoleLogin() {
       return;
     }
     
-    // In a real app, this would be an API call
-    if (username === "admin" && password === "admin") {
-      // Successful login
-      localStorage.setItem("userRole", role);
-      localStorage.setItem("userFullName", "Admin User");
+    setIsLoading(true);
+    
+    try {
+      // Call the login function from our auth service
+      const authResult = await login(username, password);
       
-      toast({
-        title: "Welcome back",
-        description: "You've successfully logged in",
-      });
-      
-      setLocation("/");
-    } else {
+      if (authResult) {
+        // Get user information
+        const userInfo = await getCurrentUser();
+        
+        if (userInfo) {
+          // Store user info
+          localStorage.setItem("userRole", userInfo.role);
+          localStorage.setItem("userFullName", userInfo.message.split(', ')[1] || "Admin User");
+          
+          toast({
+            title: "Welcome back",
+            description: "You've successfully logged in",
+          });
+          
+          setLocation("/");
+        }
+      } else {
+        toast({
+          title: "Login Failed",
+          description: "Invalid username or password",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
-        description: "Invalid username or password",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

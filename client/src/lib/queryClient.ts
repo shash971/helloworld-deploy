@@ -1,22 +1,40 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { API_BASE_URL, getAuthHeader, logout } from "@/lib/auth";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // Handle authentication errors specifically
+    if (res.status === 401) {
+      // Token might be expired, trigger logout
+      logout();
+    }
+
+    try {
+      const json = await res.json();
+      throw new Error(json.message || res.statusText || "Unknown error");
+    } catch (e) {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    }
   }
 }
 
 export async function apiRequest(
   method: string,
-  url: string,
+  endpoint: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  const headers = {
+    ...(data ? { "Content-Type": "application/json" } : {}),
+    ...getAuthHeader(),
+  };
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
   });
 
   await throwIfResNotOk(res);
@@ -29,12 +47,19 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
+    const endpoint = queryKey[0] as string;
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    const res = await fetch(url, {
+      headers: getAuthHeader(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
+    }
+
+    if (res.status === 401) {
+      logout();
     }
 
     await throwIfResNotOk(res);
@@ -47,11 +72,11 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 30000, // 30 seconds
+      retry: 1,
     },
     mutations: {
-      retry: false,
+      retry: 1,
     },
   },
 });
