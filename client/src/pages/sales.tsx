@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { insertSaleSchema } from "@shared/schema";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { API_BASE_URL, getAuthHeader, isAuthenticated } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = insertSaleSchema.extend({
   date: z.string().min(1, "Date is required"),
@@ -40,9 +44,17 @@ const formSchema = insertSaleSchema.extend({
 
 export default function Sales() {
   const [openDialog, setOpenDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   
-  // Sample data
-  const salesData = [
+  // Fetch sales data from API
+  const { data: salesApiData, isLoading, error } = useQuery({
+    queryKey: ['/sales/summary'],
+    enabled: isAuthenticated()
+  });
+  
+  // Use API data if available, otherwise use sample data
+  const [salesData, setSalesData] = useState<any[]>([
     {
       id: 1,
       invoiceNumber: "SL-10249",
@@ -97,7 +109,34 @@ export default function Sales() {
       paymentStatus: "Completed",
       items: "Gold Bangle Set",
     },
-  ];
+  ]);
+  
+  // Process API data when it arrives
+  useEffect(() => {
+    if (salesApiData && salesApiData.sales_data) {
+      try {
+        // Transform API data to match our frontend structure
+        const transformedData = Array.isArray(salesApiData.sales_data) 
+          ? salesApiData.sales_data.map((sale: any, index: number) => ({
+              id: sale.id || index + 1,
+              invoiceNumber: sale.invoice_number || `SL-${10000 + index}`,
+              date: new Date(sale.date),
+              customerName: sale.customer_name || 'Customer',
+              totalAmount: parseFloat(sale.total_amount) || 0,
+              paymentStatus: sale.payment_status || 'Pending',
+              items: sale.items || 'Various items',
+              notes: sale.notes || '',
+            }))
+          : [];
+        
+        if (transformedData.length > 0) {
+          setSalesData(transformedData);
+        }
+      } catch (error) {
+        console.error('Error processing sales data:', error);
+      }
+    }
+  }, [salesApiData]);
   
   const columns = [
     {
@@ -149,10 +188,65 @@ export default function Sales() {
     },
   });
   
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    setOpenDialog(false);
-    // Here you would typically call your API to create a new sale
+  // Mutation for creating a new sale
+  const createSaleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/sales/', data);
+    },
+    onSuccess: () => {
+      // Invalidate the sales query to refetch the data
+      queryClient.invalidateQueries({ queryKey: ['/sales/summary'] });
+      
+      toast({
+        title: "Success",
+        description: "Sale created successfully",
+        variant: "default",
+      });
+      
+      setOpenDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create sale",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Submit form data
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    
+    try {
+      // Format the data for the API
+      const saleData = {
+        invoice_number: values.invoiceNumber,
+        customer_id: 1, // This would need to come from a customer selection
+        date: values.date,
+        total_amount: parseFloat(values.totalAmount),
+        payment_status: values.paymentStatus,
+        notes: values.notes || "",
+        created_by: 1, // This would typically be the logged-in user's ID
+      };
+      
+      // Submit to backend API
+      await createSaleMutation.mutateAsync(saleData);
+      
+      // Reset the form
+      form.reset({
+        invoiceNumber: `SL-${Math.floor(10000 + Math.random() * 90000)}`,
+        date: new Date().toISOString().split("T")[0],
+        customerName: "",
+        totalAmount: "",
+        paymentStatus: "Pending",
+        notes: "",
+      });
+    } catch (error) {
+      console.error("Failed to create sale:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
   
   return (

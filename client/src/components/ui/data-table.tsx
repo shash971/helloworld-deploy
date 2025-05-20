@@ -24,6 +24,7 @@ interface DataTableProps<T> {
   pagination?: boolean;
   itemsPerPage?: number;
   actionComponent?: (row: T) => React.ReactNode;
+  isLoading?: boolean;
 }
 
 export function DataTable<T>({
@@ -36,7 +37,8 @@ export function DataTable<T>({
   filterPlaceholder = "Search...",
   pagination = true,
   itemsPerPage = 10,
-  actionComponent
+  actionComponent,
+  isLoading = false
 }: DataTableProps<T>) {
   const [sortField, setSortField] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);

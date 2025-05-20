@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { useLocation } from "wouter";
+import { logout, getAuthHeader, API_BASE_URL } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -16,6 +19,65 @@ interface HeaderProps {
 
 export function Header({ title, onOpenSidebar }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userFullName, setUserFullName] = useState<string>("User");
+  const [userRole, setUserRole] = useState<string>("");
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  
+  // Get user info from localStorage or fetch from API
+  useEffect(() => {
+    const storedFullName = localStorage.getItem("userFullName");
+    const storedRole = localStorage.getItem("userRole");
+    
+    if (storedFullName) {
+      setUserFullName(storedFullName);
+    }
+    
+    if (storedRole) {
+      setUserRole(storedRole);
+    } else {
+      // Fetch user info from API if not in localStorage
+      fetchUserInfo();
+    }
+  }, []);
+  
+  // Fetch user info from backend
+  const fetchUserInfo = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard/`, {
+        headers: getAuthHeader()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.role) {
+          setUserRole(data.role);
+          localStorage.setItem("userRole", data.role);
+        }
+        
+        if (data.message) {
+          // Extract user name from welcome message if available
+          const nameMatch = data.message.match(/Welcome, (.*?)!/);
+          if (nameMatch && nameMatch[1]) {
+            setUserFullName(nameMatch[1]);
+            localStorage.setItem("userFullName", nameMatch[1]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch user info:", error);
+    }
+  };
+  
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully"
+    });
+    setLocation('/role-login');
+  };
   
   return (
     <header className="bg-white shadow-sm">
@@ -55,7 +117,12 @@ export function Header({ title, onOpenSidebar }: HeaderProps) {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-2">
                   <i className="fas fa-user-circle"></i>
                 </div>
-                <span className="text-sm font-medium hidden md:inline-block">Admin User</span>
+                <div className="hidden md:block text-left">
+                  <span className="text-sm font-medium block">{userFullName}</span>
+                  {userRole && (
+                    <span className="text-xs text-neutral-500">{userRole}</span>
+                  )}
+                </div>
                 <i className={cn("fas fa-chevron-down text-xs ml-2", showUserMenu && "rotate-180 transition-transform")}></i>
               </button>
             </DropdownMenuTrigger>
@@ -67,7 +134,7 @@ export function Header({ title, onOpenSidebar }: HeaderProps) {
                 <i className="fas fa-cog mr-2 text-neutral-500"></i> Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-error">
+              <DropdownMenuItem className="text-error" onClick={handleLogout}>
                 <i className="fas fa-sign-out-alt mr-2"></i> Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
