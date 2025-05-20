@@ -168,7 +168,19 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-neutral-200">
-            {paginatedData.length > 0 ? (
+            {isLoading ? (
+              <tr>
+                <td 
+                  colSpan={columns.length + (actionComponent ? 1 : 0)} 
+                  className="px-6 py-8 text-center text-sm text-neutral-500"
+                >
+                  <div className="flex flex-col items-center py-4">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="mt-2">Loading data...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedData.length > 0 ? (
               paginatedData.map((row) => (
                 <tr 
                   key={String(row[keyField])}

@@ -113,45 +113,51 @@ export default function Dashboard() {
     },
   ];
 
-  const columns = [
+  // Define column type to fix type errors
+  type Transaction = typeof recentTransactions[0];
+  
+  // Define column configs for transactions table
+  const getColumns = () => [
     {
       header: "Date",
-      accessor: (row: typeof recentTransactions[0]) => formatDate(row.date),
+      accessor: (row: Transaction) => formatDate(row.date),
       sortable: true,
     },
     {
       header: "Transaction ID",
-      accessor: (row: typeof recentTransactions[0]) => (
+      accessor: (row: Transaction) => (
         <span className="font-medium text-primary">{row.transactionId}</span>
       ),
       sortable: true,
     },
     {
       header: "Type",
-      accessor: (row: typeof recentTransactions[0]) => (
+      accessor: (row: Transaction) => (
         <TransactionBadge type={row.type} />
       ),
       sortable: true,
     },
     {
       header: "Customer/Vendor",
-      accessor: "customerVendor",
+      accessor: (row: Transaction) => row.customerVendor,
       sortable: true,
     },
     {
       header: "Amount",
-      accessor: (row: typeof recentTransactions[0]) => (
+      accessor: (row: Transaction) => (
         <span className="font-medium">{formatCurrency(row.amount)}</span>
       ),
       sortable: true,
     },
     {
       header: "Status",
-      accessor: (row: typeof recentTransactions[0]) => (
+      accessor: (row: Transaction) => (
         <StatusBadge type="status" value={row.status} />
       ),
     },
   ];
+  
+  const columns = getColumns();
   
   // Stock overview data
   const stockItems = [
@@ -218,6 +224,11 @@ export default function Dashboard() {
     },
   ];
   
+  // Extract dashboard summary data from API response
+  const totalSales = dashboardData?.total_sales || 2375492;
+  const totalPurchases = dashboardData?.total_purchases || 1842100;
+  const inventoryValue = dashboardData?.inventory_value || 15268900;
+  
   return (
     <MainLayout title="Dashboard">
       {/* Top Stats Row */}
@@ -225,8 +236,8 @@ export default function Dashboard() {
         {/* Sales Summary Card */}
         <ChartCard 
           title="Total Sales" 
-          value={formatCurrency(2375492)}
-          changePercentage={12.5}
+          value={formatCurrency(totalSales)}
+          changePercentage={dashboardData?.sales_growth || 12.5}
         >
           <SimpleBarChart color="primary" />
         </ChartCard>
@@ -234,8 +245,8 @@ export default function Dashboard() {
         {/* Purchases Summary Card */}
         <ChartCard 
           title="Total Purchases" 
-          value={formatCurrency(1842100)}
-          changePercentage={8.3}
+          value={formatCurrency(totalPurchases)}
+          changePercentage={dashboardData?.purchases_growth || 8.3}
         >
           <SimpleBarChart color="secondary" />
         </ChartCard>
@@ -243,11 +254,26 @@ export default function Dashboard() {
         {/* Inventory Value Card */}
         <ProgressCard
           title="Inventory Value"
-          value={formatCurrency(15268900)}
+          value={formatCurrency(inventoryValue)}
           items={[
-            { label: "Jewellery", value: 0, percentage: 65, color: "primary" },
-            { label: "Certified", value: 0, percentage: 23, color: "secondary" },
-            { label: "Loose", value: 0, percentage: 12, color: "info" },
+            { 
+              label: "Jewellery", 
+              value: 0, 
+              percentage: dashboardData?.inventory_breakdown?.jewellery || 65, 
+              color: "primary" 
+            },
+            { 
+              label: "Certified", 
+              value: 0, 
+              percentage: dashboardData?.inventory_breakdown?.certified || 23, 
+              color: "secondary" 
+            },
+            { 
+              label: "Loose", 
+              value: 0, 
+              percentage: dashboardData?.inventory_breakdown?.loose || 12, 
+              color: "info" 
+            },
           ]}
           footnote={{ label: "Last update:", value: "Today, 15:30" }}
         />
@@ -313,9 +339,10 @@ export default function Dashboard() {
           </div>
         </div>
         <DataTable
-          columns={columns}
+          columns={columns.map(col => ({ ...col }))}
           data={recentTransactions}
           keyField="id"
+          isLoading={isLoading}
           actionComponent={(row) => (
             <Button variant="link" className="text-primary hover:text-primary-dark">
               View

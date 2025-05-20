@@ -47,8 +47,16 @@ export default function Sales() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
+  // Define interface for API response
+  interface SalesApiResponse {
+    sales_data?: any[];
+    total_sales?: number;
+    pending_payments?: number;
+    total_transactions?: number;
+  }
+  
   // Fetch sales data from API
-  const { data: salesApiData, isLoading, error } = useQuery({
+  const { data: salesApiData, isLoading, error } = useQuery<SalesApiResponse>({
     queryKey: ['/sales/summary'],
     enabled: isAuthenticated()
   });
@@ -432,7 +440,11 @@ export default function Sales() {
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea rows={3} {...field} />
+                      <Textarea 
+                        rows={3} 
+                        {...field} 
+                        value={field.value || ''} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

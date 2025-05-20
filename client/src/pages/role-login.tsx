@@ -39,15 +39,34 @@ export default function RoleLogin() {
         const userInfo = await getCurrentUser();
         
         if (userInfo) {
-          // Store user info
-          localStorage.setItem("userRole", userInfo.role);
-          localStorage.setItem("userFullName", userInfo.message.split(', ')[1] || "Admin User");
+          // Parse user info from the welcome message if available
+          let userName = "User";
+          if (userInfo.message) {
+            // Try to extract name from "Welcome, [Name]!" format
+            const nameMatch = userInfo.message.match(/Welcome, (.*?)!/);
+            if (nameMatch && nameMatch[1]) {
+              userName = nameMatch[1];
+            }
+          }
+          
+          // Store user info in localStorage for persistence
+          localStorage.setItem("userRole", userInfo.role || role);
+          localStorage.setItem("userFullName", userName);
           
           toast({
             title: "Welcome back",
-            description: "You've successfully logged in",
+            description: `You've successfully logged in as ${userName}`,
           });
           
+          // Redirect to dashboard
+          setLocation("/");
+        } else {
+          // If we got a token but couldn't get user info, still allow login
+          localStorage.setItem("userRole", role);
+          toast({
+            title: "Welcome",
+            description: "You've successfully logged in",
+          });
           setLocation("/");
         }
       } else {
@@ -116,8 +135,19 @@ export default function RoleLogin() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full">
-                    Sign In
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
                   </Button>
                 </CardFooter>
               </form>
