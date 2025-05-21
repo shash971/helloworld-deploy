@@ -57,7 +57,7 @@ export default function Sales() {
   
   // Fetch sales data from API
   const { data: salesApiData, isLoading, error } = useQuery<SalesApiResponse>({
-    queryKey: ['/sales/summary'],
+    queryKey: ['/sales'],
     enabled: isAuthenticated()
   });
   
@@ -121,24 +121,28 @@ export default function Sales() {
   
   // Process API data when it arrives
   useEffect(() => {
-    if (salesApiData && salesApiData.sales_data) {
+    console.log("Sales API data received:", salesApiData);
+    if (salesApiData) {
       try {
-        // Transform API data to match our frontend structure
-        const transformedData = Array.isArray(salesApiData.sales_data) 
-          ? salesApiData.sales_data.map((sale: any, index: number) => ({
-              id: sale.id || index + 1,
-              invoiceNumber: sale.invoice_number || `SL-${10000 + index}`,
-              date: new Date(sale.date),
-              customerName: sale.customer_name || 'Customer',
-              totalAmount: parseFloat(sale.total_amount) || 0,
-              paymentStatus: sale.payment_status || 'Pending',
-              items: sale.items || 'Various items',
-              notes: sale.notes || '',
-            }))
-          : [];
+        // Check if salesApiData is an array (GET /sales endpoint returns an array)
+        const salesArray = Array.isArray(salesApiData) ? salesApiData : [];
         
-        if (transformedData.length > 0) {
+        if (salesArray.length > 0) {
+          // Transform API data to match our frontend structure
+          const transformedData = salesArray.map((sale: any, index: number) => ({
+            id: sale.id || index + 1,
+            invoiceNumber: `SL-${70000 + sale.id}`,
+            date: new Date(sale.date),
+            customerName: sale.customer || 'Customer',
+            totalAmount: parseFloat(sale.total?.toString() || '0'),
+            paymentStatus: sale.pay_mode === 'Full Payment' ? 'Completed' : 'Pending',
+            items: sale.iteam || 'Jewelry Item',
+          }));
+          
+          console.log("Transformed sales data:", transformedData);
           setSalesData(transformedData);
+        } else {
+          console.log("No sales data found in API response, using sample data");
         }
       } catch (error) {
         console.error('Error processing sales data:', error);
@@ -205,7 +209,7 @@ export default function Sales() {
     },
     onSuccess: () => {
       // Invalidate the sales query to refetch the data
-      queryClient.invalidateQueries({ queryKey: ['/sales/summary'] });
+      queryClient.invalidateQueries({ queryKey: ['/sales'] });
       
       toast({
         title: "Success",
@@ -226,7 +230,7 @@ export default function Sales() {
         customerName: form.getValues("customerName"),
         totalAmount: parseFloat(form.getValues("totalAmount") || "0"),
         paymentStatus: form.getValues("paymentStatus"),
-        items: "New sale",
+        items: "Jewelry Item",
       };
       
       setSalesData([newSale, ...salesData]);
