@@ -274,30 +274,53 @@ export default function Sales() {
       // This matches the SalesBase model in your backend
       const todayDate = values.date || new Date().toISOString().split("T")[0];
       
+      // Format the date string properly as YYYY-MM-DD
+      const dateObj = new Date(todayDate);
+      const formattedDate = dateObj.toISOString().split('T')[0];
+      
+      // Create sale data object exactly matching the SQLite table structure
       const saleData = {
-        date: todayDate,
+        date: formattedDate,
         customer: values.customerName,
-        iteam: values.invoiceNumber, // Using invoice number as item for now
+        iteam: "Diamond Jewelry", // Default jewelry item
         shape: "Round",  // Default value
         size: "Medium",  // Default value
-        col: "Clear",    // Default value
-        clr: "VS",       // Default value
-        pcs: 1,          // Default value
+        col: "D",        // Diamond color
+        clr: "VS1",      // Diamond clarity
+        pcs: 1,          // Default pieces
         lab_no: values.invoiceNumber.replace("SL-", ""),
         rate: parseFloat(values.totalAmount) || 0,
         total: parseFloat(values.totalAmount) || 0,
         term: "Net 30",  // Default value
         currency: "INR", // Default value
         pay_mode: values.paymentStatus,
-        sales_executive: "Admin User", // Default value
+        sales_executive: "Admin", // Default value
         remark: values.notes || ""
       };
       
       console.log("Formatted sale data for backend:", saleData);
       
-      // Submit to backend API with direct fetch for better debugging
-      const result = await createSaleMutation.mutateAsync(saleData);
-      console.log("Sale creation result:", result);
+      // Submit to backend API with direct fetch to ensure proper data format
+      // Instead of using the mutation, let's make a direct fetch request
+      console.log("About to send this data to the server:", JSON.stringify(saleData));
+      
+      const response = await fetch(`${API_BASE_URL}/sales/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
+        body: JSON.stringify(saleData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to save sale:', errorText);
+        throw new Error(`Failed to save sale: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log("Sale successfully created:", result);
       
       // Show success message immediately for better user feedback
       toast({
