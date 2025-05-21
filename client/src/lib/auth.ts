@@ -21,28 +21,48 @@ export async function login(username: string, password: string): Promise<AuthRes
   try {
     console.log(`Attempting login with username: ${username}`);
     
-    // Using the exact format from the FastAPI backend (auth_routes.py)
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    // Create form data exactly as FastAPI expects it
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+    
+    // Make direct fetch request to avoid any middleware issues
+    // This ensures we're using the exact format the FastAPI backend expects
+    const requestOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        username,
-        password,
-      }),
+      body: formData.toString(),
+    };
+    
+    console.log("Sending auth request with options:", {
+      url: `${API_BASE_URL}/auth/login`,
+      method: requestOptions.method,
+      headers: requestOptions.headers,
+      bodyPreview: formData.toString(),
     });
-
+    
+    const response = await fetch(`${API_BASE_URL}/auth/login`, requestOptions);
+    
+    console.log("Auth response status:", response.status);
+    
+    // Handle non-OK responses
     if (!response.ok) {
-      console.error("Login failed", response.status);
-      const errorText = await response.text();
-      throw new Error(`Login failed: ${errorText}`);
+      const errorBody = await response.text();
+      console.error("Login failed details:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody
+      });
+      throw new Error(`Login failed (${response.status}): ${errorBody}`);
     }
 
+    // Parse the successful response
     const data: AuthResponse = await response.json();
-    console.log("Login successful, received token");
+    console.log("Login successful, received token data");
     
-    // Store token in localStorage
+    // Store authentication data in localStorage
     localStorage.setItem('jwt_token', data.access_token);
     localStorage.setItem('token_type', data.token_type);
     

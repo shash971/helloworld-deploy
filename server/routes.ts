@@ -80,20 +80,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle different content types appropriately
       if (['POST', 'PUT', 'PATCH'].includes(req.method || '')) {
+        console.log('Request body:', req.body);
+        console.log('Content-Type:', req.headers['content-type']);
+        
         if (req.headers['content-type']?.includes('application/json')) {
           fetchOptions.body = JSON.stringify(req.body);
           fetchOptions.headers['content-type'] = 'application/json';
+          console.log('Sending JSON body:', fetchOptions.body);
         } else if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-          // Convert form data to proper format using URLSearchParams
+          // Use URLSearchParams to properly encode form data
           const formData = new URLSearchParams();
-          for (const [key, value] of Object.entries(req.body)) {
-            formData.append(key, String(value));
+          
+          // Handle form data correctly
+          if (req.body && typeof req.body === 'object') {
+            for (const [key, value] of Object.entries(req.body)) {
+              if (value !== undefined) {
+                formData.append(key, String(value));
+              }
+            }
           }
+          
           fetchOptions.body = formData.toString();
           fetchOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
+          console.log('Sending form data:', fetchOptions.body);
+          
+          // Special handling for auth endpoints to ensure proper format
+          if (apiPath.includes('/auth/login')) {
+            console.log('Processing login request with special handling');
+          }
+        } else if (req.headers['content-type']?.includes('multipart/form-data')) {
+          // For multipart form data, try to pass through as-is
+          fetchOptions.body = req.body;
+          // Keep the original content-type header with boundary
+          fetchOptions.headers['content-type'] = req.headers['content-type'];
         } else {
           // For other content types, try to convert to string
           fetchOptions.body = typeof req.body === 'object' ? JSON.stringify(req.body) : String(req.body);
+          console.log('Sending other body format:', typeof fetchOptions.body);
         }
       }
       
