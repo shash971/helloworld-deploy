@@ -55,10 +55,11 @@ export default function Sales() {
     total_transactions?: number;
   }
   
-  // Fetch sales data from API
-  const { data: salesApiData, isLoading, error } = useQuery<SalesApiResponse>({
-    queryKey: ['/sales'],
-    enabled: isAuthenticated()
+  // Fetch sales data directly
+  const { data: salesApiData, isLoading, error } = useQuery<any[]>({
+    queryKey: ['/sales/'],
+    enabled: isAuthenticated(),
+    retry: 1,
   });
   
   // Use API data if available, otherwise use sample data
@@ -200,12 +201,30 @@ export default function Sales() {
     },
   });
   
-  // Mutation for creating a new sale
+  // Mutation for creating a new sale with direct form data approach
   const createSaleMutation = useMutation({
     mutationFn: async (data: any) => {
       // Log the exact data being sent to the backend
       console.log("Sending sale data to backend:", data);
-      return apiRequest('POST', '/sales/', data);
+      
+      // Create a direct fetch to the backend without using the apiRequest helper
+      const response = await fetch(`${API_BASE_URL}/sales/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
+        body: JSON.stringify(data)
+      });
+      
+      // Check if the response is successful
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error creating sale:", errorText);
+        throw new Error(`Failed to create sale: ${errorText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       // Invalidate the sales query to refetch the data
@@ -249,28 +268,43 @@ export default function Sales() {
     setIsSubmitting(true);
     
     try {
-      // Format the data according to the actual backend model (SalesCreate)
+      console.log("Form values submitted:", values);
+      
+      // Format the sale data exactly as the backend expects it
+      // This matches the SalesBase model in your backend
+      const todayDate = values.date || new Date().toISOString().split("T")[0];
+      
       const saleData = {
-        date: values.date,
+        date: todayDate,
         customer: values.customerName,
-        iteam: "Jewelry Item", // Default placeholder for item
-        shape: "",
-        size: "",
-        col: "",
-        clr: "",
-        pcs: 1,
-        lab_no: "",
-        rate: 0,
-        total: parseFloat(values.totalAmount),
-        term: "Cash",
-        currency: "INR",
-        pay_mode: values.paymentStatus === "Completed" ? "Full Payment" : "Pending",
-        sales_executive: "Admin", // Default to admin user
-        remark: values.notes || "",
+        iteam: values.invoiceNumber, // Using invoice number as item for now
+        shape: "Round",  // Default value
+        size: "Medium",  // Default value
+        col: "Clear",    // Default value
+        clr: "VS",       // Default value
+        pcs: 1,          // Default value
+        lab_no: values.invoiceNumber.replace("SL-", ""),
+        rate: parseFloat(values.totalAmount) || 0,
+        total: parseFloat(values.totalAmount) || 0,
+        term: "Net 30",  // Default value
+        currency: "INR", // Default value
+        pay_mode: values.paymentStatus,
+        sales_executive: "Admin User", // Default value
+        remark: values.notes || ""
       };
       
-      // Submit to backend API
-      await createSaleMutation.mutateAsync(saleData);
+      console.log("Formatted sale data for backend:", saleData);
+      
+      // Submit to backend API with direct fetch for better debugging
+      const result = await createSaleMutation.mutateAsync(saleData);
+      console.log("Sale creation result:", result);
+      
+      // Show success message immediately for better user feedback
+      toast({
+        title: "Success",
+        description: "Sale created successfully",
+        variant: "default",
+      });
       
       // Reset the form with new defaults
       form.reset({
@@ -281,8 +315,30 @@ export default function Sales() {
         paymentStatus: "Pending",
         notes: "",
       });
+      
+      // Close the dialog
+      setOpenDialog(false);
+      
+      // Add the new sale to the list immediately
+      const newSale = {
+        id: salesData.length + 1,
+        invoiceNumber: values.invoiceNumber,
+        date: new Date(todayDate),
+        customerName: values.customerName,
+        totalAmount: parseFloat(values.totalAmount) || 0,
+        paymentStatus: values.paymentStatus,
+        items: "Jewelry Item",
+      };
+      
+      setSalesData([newSale, ...salesData]);
+      
     } catch (error) {
       console.error("Failed to create sale:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create sale",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
