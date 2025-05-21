@@ -187,7 +187,7 @@ export default function Sales() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      invoiceNumber: `SL-${Math.floor(10000 + Math.random() * 90000)}`,
+      invoiceNumber: `SL-${Math.floor(70000 + Math.random() * 9000)}`,
       date: new Date().toISOString().split("T")[0],
       customerName: "",
       totalAmount: "",
@@ -199,6 +199,8 @@ export default function Sales() {
   // Mutation for creating a new sale
   const createSaleMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Log the exact data being sent to the backend
+      console.log("Sending sale data to backend:", data);
       return apiRequest('POST', '/sales/', data);
     },
     onSuccess: () => {
@@ -211,7 +213,23 @@ export default function Sales() {
         variant: "default",
       });
       
-      setOpenDialog(false);
+      // Add a visual feedback before closing
+      setTimeout(() => {
+        setOpenDialog(false);
+      }, 500);
+      
+      // Add to local data temporarily for immediate feedback
+      const newSale = {
+        id: salesData.length + 1,
+        invoiceNumber: form.getValues("invoiceNumber"),
+        date: new Date(form.getValues("date")),
+        customerName: form.getValues("customerName"),
+        totalAmount: parseFloat(form.getValues("totalAmount") || "0"),
+        paymentStatus: form.getValues("paymentStatus"),
+        items: "New sale",
+      };
+      
+      setSalesData([newSale, ...salesData]);
     },
     onError: (error: any) => {
       toast({
@@ -227,23 +245,32 @@ export default function Sales() {
     setIsSubmitting(true);
     
     try {
-      // Format the data for the API
+      // Format the data according to the actual backend model (SalesCreate)
       const saleData = {
-        invoice_number: values.invoiceNumber,
-        customer_id: 1, // This would need to come from a customer selection
         date: values.date,
-        total_amount: parseFloat(values.totalAmount),
-        payment_status: values.paymentStatus,
-        notes: values.notes || "",
-        created_by: 1, // This would typically be the logged-in user's ID
+        customer: values.customerName,
+        iteam: "Jewelry Item", // Default placeholder for item
+        shape: "",
+        size: "",
+        col: "",
+        clr: "",
+        pcs: 1,
+        lab_no: "",
+        rate: 0,
+        total: parseFloat(values.totalAmount),
+        term: "Cash",
+        currency: "INR",
+        pay_mode: values.paymentStatus === "Completed" ? "Full Payment" : "Pending",
+        sales_executive: "Admin", // Default to admin user
+        remark: values.notes || "",
       };
       
       // Submit to backend API
       await createSaleMutation.mutateAsync(saleData);
       
-      // Reset the form
+      // Reset the form with new defaults
       form.reset({
-        invoiceNumber: `SL-${Math.floor(10000 + Math.random() * 90000)}`,
+        invoiceNumber: `SL-${Math.floor(70000 + Math.random() * 9000)}`,
         date: new Date().toISOString().split("T")[0],
         customerName: "",
         totalAmount: "",
