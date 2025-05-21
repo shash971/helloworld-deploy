@@ -84,11 +84,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fetchOptions.body = JSON.stringify(req.body);
           fetchOptions.headers['content-type'] = 'application/json';
         } else if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-          // For form-urlencoded data, forward as-is
-          fetchOptions.body = req.body;
+          // Convert form data to proper format using URLSearchParams
+          const formData = new URLSearchParams();
+          for (const [key, value] of Object.entries(req.body)) {
+            formData.append(key, String(value));
+          }
+          fetchOptions.body = formData.toString();
+          fetchOptions.headers['content-type'] = 'application/x-www-form-urlencoded';
         } else {
-          // For other content types, forward raw body
-          fetchOptions.body = req.body;
+          // For other content types, try to convert to string
+          fetchOptions.body = typeof req.body === 'object' ? JSON.stringify(req.body) : String(req.body);
         }
       }
       
