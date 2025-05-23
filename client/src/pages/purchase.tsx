@@ -66,6 +66,8 @@ export default function Purchase() {
   const [purchasesData, setPurchasesData] = useState<PurchaseItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewPurchase, setViewPurchase] = useState<PurchaseItem | null>(null);
+  const [viewDialog, setViewDialog] = useState(false);
   const { toast } = useToast();
   
   // Filter purchases data based on search term
@@ -942,6 +944,65 @@ export default function Purchase() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Purchase Dialog */}
+      <Dialog open={viewDialog} onOpenChange={setViewDialog}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Purchase Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about purchase {viewPurchase?.poNumber}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewPurchase && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">PO Number</h4>
+                  <p className="text-base">{viewPurchase.poNumber}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Date</h4>
+                  <p className="text-base">{formatDate(viewPurchase.date)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium">Vendor Name</h4>
+                <p className="text-base">{viewPurchase.vendorName}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">Items</h4>
+                  <p className="text-base">{viewPurchase.items}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Amount</h4>
+                  <p className="text-base font-medium">{formatCurrency(viewPurchase.totalAmount)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium">Payment Status</h4>
+                <div className="mt-1">
+                  <StatusBadge type="status" value={viewPurchase.paymentStatus} />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewDialog(false)}>
+              Close
+            </Button>
+            <Button onClick={() => handlePrintPurchase(viewPurchase!)}>
+              Print Details
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>
