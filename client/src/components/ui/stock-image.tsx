@@ -2,13 +2,13 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface StockImageProps {
-  type: "jewelry-store" | "jewelry-counter" | "gemstone-collection";
+  type: "jewelry-store" | "jewelry-counter" | "gemstone-collection" | "certified-stone";
   className?: string;
 }
 
 export function StockImage({ type, className }: StockImageProps) {
   // Using URLs from CDNs for placeholder jewelry stock photos
-  const imageUrls = {
+  const imageUrls: Record<string, string[]> = {
     "jewelry-store": [
       "https://images.unsplash.com/photo-1586074299757-dc655f18518c?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1551649668-fe62a50fba37?auto=format&fit=crop&w=800&q=80",
@@ -21,6 +21,11 @@ export function StockImage({ type, className }: StockImageProps) {
     "gemstone-collection": [
       "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1620230874543-3049b9989cd8?auto=format&fit=crop&w=800&q=80"
+    ],
+    "certified-stone": [
+      "https://images.unsplash.com/photo-1615655060948-2a1920435916?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1579042904065-099a6505b3a5?auto=format&fit=crop&w=800&q=80"
     ]
   };
 
