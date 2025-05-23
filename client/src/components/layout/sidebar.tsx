@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -240,7 +240,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   }
                   
                   return (
-                    <React.Fragment key={idx}>
+                    <Fragment key={idx}>
                       <li className="px-4 pt-5 pb-2">
                         <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                           {item.section}
@@ -255,7 +255,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                           isActive={location === subItem.href}
                         />
                       ))}
-                    </React.Fragment>
+                    </Fragment>
                   );
                 }
                 

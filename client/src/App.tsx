@@ -36,16 +36,18 @@ const ProtectedRoute = ({ component: Component, ...rest }: { component: React.Co
     }
     
     // Role-based access control for specific routes
-    const userRole = localStorage.getItem('userRole')?.toLowerCase();
     const path = rest.path || '';
     
     // Admin routes - only accessible by admin and manager roles
     const adminRoutes = ['/user-management'];
     
     // Check if current route is restricted and user doesn't have permission
-    if (adminRoutes.includes(path) && 
-        userRole !== 'admin' && userRole !== 'manager') {
+    const userRole = localStorage.getItem('userRole')?.toLowerCase();
+    const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+    
+    if (adminRoutes.includes(path) && !isAdminOrManager) {
       // Redirect to dashboard if unauthorized
+      console.log("Access denied: User does not have admin/manager role");
       setLocation('/dashboard');
       return;
     }

@@ -101,6 +101,19 @@ export function isAuthenticated(): boolean {
   return !!getAuthToken();
 }
 
+// Function to check if user has specific role
+export function hasRole(requiredRoles: string[]): boolean {
+  const userRole = localStorage.getItem('userRole')?.toLowerCase();
+  if (!userRole) return false;
+  
+  return requiredRoles.map(r => r.toLowerCase()).includes(userRole);
+}
+
+// Function to check if user is admin or manager
+export function isAdminOrManager(): boolean {
+  return hasRole(['admin', 'manager']);
+}
+
 // Function to logout
 export function logout(): void {
   localStorage.removeItem('jwt_token');
