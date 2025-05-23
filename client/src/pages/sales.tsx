@@ -68,7 +68,23 @@ export default function Sales() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [salesData, setSalesData] = useState<SaleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  
+  // Filter sales data based on search term
+  const filteredSalesData = useMemo(() => {
+    if (!searchTerm.trim()) return salesData;
+    
+    return salesData.filter(sale => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        (sale.invoiceNumber?.toLowerCase().includes(searchLower)) ||
+        (sale.customerName?.toLowerCase().includes(searchLower)) ||
+        (sale.items?.toLowerCase().includes(searchLower)) ||
+        (sale.paymentStatus?.toLowerCase().includes(searchLower))
+      );
+    });
+  }, [salesData, searchTerm]);
   
   // Function to handle Excel/CSV file import
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -512,6 +528,10 @@ export default function Sales() {
           ) : salesData.length === 0 ? (
             <div className="flex justify-center items-center h-32">
               <p>No sales records found. Start by creating a new sale.</p>
+            </div>
+          ) : filteredSalesData.length === 0 ? (
+            <div className="flex justify-center items-center h-32">
+              <p>No sales records match your search. Try a different search term.</p>
             </div>
           ) : (
             <DataTable
