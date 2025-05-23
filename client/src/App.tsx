@@ -24,14 +24,32 @@ import UserManagement from "@/pages/user-management";
 import UserProfile from "@/pages/user-profile";
 
 // Protected route component that redirects to login if not authenticated
+// Also handles role-based access control
 const ProtectedRoute = ({ component: Component, ...rest }: { component: React.ComponentType<any>, path?: string }) => {
   const [, setLocation] = useLocation();
   
   useEffect(() => {
+    // Check authentication
     if (!isAuthenticated()) {
       setLocation('/role-login');
+      return;
     }
-  }, [setLocation]);
+    
+    // Role-based access control for specific routes
+    const userRole = localStorage.getItem('userRole')?.toLowerCase();
+    const path = rest.path || '';
+    
+    // Admin routes - only accessible by admin and manager roles
+    const adminRoutes = ['/user-management'];
+    
+    // Check if current route is restricted and user doesn't have permission
+    if (adminRoutes.includes(path) && 
+        userRole !== 'admin' && userRole !== 'manager') {
+      // Redirect to dashboard if unauthorized
+      setLocation('/dashboard');
+      return;
+    }
+  }, [setLocation, rest.path]);
   
   return isAuthenticated() ? <Component {...rest} /> : null;
 };
@@ -88,7 +106,7 @@ function Router() {
         {() => <ProtectedRoute component={Reports} />}
       </Route>
       <Route path="/user-management">
-        {() => <ProtectedRoute component={UserManagement} />}
+        {() => <ProtectedRoute component={UserManagement} path="/user-management" />}
       </Route>
       <Route path="/user-profile">
         {() => <ProtectedRoute component={UserProfile} />}
