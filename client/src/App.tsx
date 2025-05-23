@@ -18,6 +18,7 @@ import IgiReceive from "@/pages/igi-receive";
 import JewelleryManagement from "@/pages/jewellery-management";
 import InventoryManagement from "@/pages/inventory-management";
 import Reports from "@/pages/reports";
+import TasksPage from "@/pages/tasks";
 import RoleLogin from "@/pages/role-login";
 
 // Protected route component that redirects to login if not authenticated
@@ -83,6 +84,9 @@ function Router() {
       </Route>
       <Route path="/reports">
         {() => <ProtectedRoute component={Reports} />}
+      </Route>
+      <Route path="/tasks">
+        {() => <ProtectedRoute component={TasksPage} />}
       </Route>
       
       <Route component={NotFound} />
