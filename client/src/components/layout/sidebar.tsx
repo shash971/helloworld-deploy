@@ -130,6 +130,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       section: "Administration",
       items: [
         {
+          title: "User Management",
+          icon: <i className="fas fa-users-cog"></i>,
+          href: "/user-management",
+        },
+        {
           title: "Role-Based Login",
           icon: <i className="fas fa-user-shield"></i>,
           href: "/role-login",
