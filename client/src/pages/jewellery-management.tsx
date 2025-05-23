@@ -187,7 +187,11 @@ const jewelryFormSchema = z.object({
 
 export default function JewelleryManagement() {
   const { toast } = useToast();
-  const [jewelleryData, setJewelleryData] = useState(jewelleryStockData);
+  // Load data from localStorage if available, otherwise use sample data
+  const [jewelleryData, setJewelleryData] = useState(() => {
+    const savedData = localStorage.getItem('jewelleryData');
+    return savedData ? JSON.parse(savedData) : jewelleryStockData;
+  });
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -380,6 +384,8 @@ export default function JewelleryManagement() {
       lastModified: new Date(),
     };
     
+    let updatedData;
+    
     if (dialogMode === "create") {
       // Create new item
       const newItem = {
@@ -389,7 +395,8 @@ export default function JewelleryManagement() {
         ...formattedItem,
       };
       
-      setJewelleryData([...jewelleryData, newItem]);
+      updatedData = [...jewelleryData, newItem];
+      
       toast({
         title: "Item Created",
         description: `${values.name} has been added to jewelry inventory.`,
@@ -397,11 +404,11 @@ export default function JewelleryManagement() {
       });
     } else if (dialogMode === "edit" && selectedItem) {
       // Update existing item
-      setJewelleryData(jewelleryData.map(item => 
+      updatedData = jewelleryData.map(item => 
         item.id === selectedItem.id 
           ? { ...item, ...formattedItem } 
           : item
-      ));
+      );
       
       toast({
         title: "Item Updated",
@@ -410,13 +417,22 @@ export default function JewelleryManagement() {
       });
     }
     
+    // Update state and save to localStorage
+    setJewelleryData(updatedData);
+    localStorage.setItem('jewelleryData', JSON.stringify(updatedData));
+    
     setOpenDialog(false);
   }
   
   // Handle delete item
   const handleDeleteItem = (item: any) => {
     if (confirm(`Are you sure you want to delete ${item.name}?`)) {
-      setJewelleryData(jewelleryData.filter(i => i.id !== item.id));
+      const updatedData = jewelleryData.filter(i => i.id !== item.id);
+      
+      // Update state and save to localStorage
+      setJewelleryData(updatedData);
+      localStorage.setItem('jewelleryData', JSON.stringify(updatedData));
+      
       toast({
         title: "Item Deleted",
         description: `${item.name} has been deleted from the inventory.`,
