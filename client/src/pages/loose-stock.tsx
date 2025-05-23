@@ -119,11 +119,128 @@ export default function LooseStock() {
   // Calculate total quantity
   const totalQuantity = stockData.reduce((sum, item) => sum + item.quantity, 0);
   
-  // Handle view item
+  // Handle view item in professional dialog
+  const [viewDialog, setViewDialog] = useState(false);
+  const [viewItem, setViewItem] = useState<any>(null);
+  
   const handleViewItem = (item: any) => {
-    setEditItem(item);
-    setViewMode("form");
-    setOpenDialog(true);
+    setViewItem(item);
+    setViewDialog(true);
+  };
+  
+  // Handle printing stock item details
+  const handlePrintItem = (item: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: "Print Error",
+        description: "Unable to open print window. Please check your browser settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Loose Stock Details - ${item.itemCode}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            h1 { color: #333; margin-bottom: 5px; }
+            .logo { margin-bottom: 20px; }
+            .info-section { margin-bottom: 20px; }
+            .info-row { display: flex; margin-bottom: 8px; }
+            .info-label { font-weight: bold; width: 150px; }
+            .info-value { flex: 1; }
+            .badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 14px; }
+            .badge-store { background-color: #E3F2FD; color: #1976D2; }
+            .badge-safe { background-color: #E8F5E9; color: #388E3C; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #777; }
+            @media print {
+              body { margin: 20px; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Loose Stock Details</h1>
+            <p>Item Code: ${item.itemCode}</p>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-row">
+              <div class="info-label">Stone Type:</div>
+              <div class="info-value">${item.stoneType}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Shape:</div>
+              <div class="info-value">${item.shape}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Carat:</div>
+              <div class="info-value">${item.carat}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Color:</div>
+              <div class="info-value">${item.color}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Clarity:</div>
+              <div class="info-value">${item.clarity}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Cut:</div>
+              <div class="info-value">${item.cut}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Quantity:</div>
+              <div class="info-value">${item.quantity}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Cost Price:</div>
+              <div class="info-value">${formatCurrency(item.costPrice)}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Selling Price:</div>
+              <div class="info-value">${formatCurrency(item.sellingPrice)}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Location:</div>
+              <div class="info-value">
+                <span class="badge badge-${item.location.toLowerCase().replace(' ', '-')}">${item.location}</span>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Notes:</div>
+              <div class="info-value">${item.notes || 'No notes'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Last Updated:</div>
+              <div class="info-value">${new Date(item.lastUpdated).toLocaleDateString()}</div>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>This is a computer-generated document. No signature required.</p>
+            <p>Printed on: ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print();" style="padding: 10px 20px;">Print</button>
+          </div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Auto print after a short delay to allow the window to load
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
   
   // Handle edit item
@@ -304,6 +421,112 @@ export default function LooseStock() {
             onSubmit={handleFormSubmit}
             onCancel={handleFormCancel}
           />
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Stock Item Dialog */}
+      <Dialog open={viewDialog} onOpenChange={setViewDialog}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Loose Stock Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about stock item {viewItem?.itemCode}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewItem && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">Item Code</h4>
+                  <p className="text-base">{viewItem.itemCode}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Stone Type</h4>
+                  <p className="text-base">{viewItem.stoneType}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">Shape</h4>
+                  <p className="text-base">{viewItem.shape}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Carat</h4>
+                  <p className="text-base">{viewItem.carat}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Cut</h4>
+                  <p className="text-base">{viewItem.cut}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">Color</h4>
+                  <p className="text-base">{viewItem.color}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Clarity</h4>
+                  <p className="text-base">{viewItem.clarity}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">Cost Price</h4>
+                  <p className="text-base">{formatCurrency(viewItem.costPrice)}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Selling Price</h4>
+                  <p className="text-base font-medium">{formatCurrency(viewItem.sellingPrice)}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium">Quantity</h4>
+                  <p className="text-base">{viewItem.quantity}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium">Location</h4>
+                  <p className="text-base">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      viewItem.location === 'Main Store' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {viewItem.location}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              
+              {viewItem.notes && (
+                <div>
+                  <h4 className="text-sm font-medium">Notes</h4>
+                  <p className="text-base">{viewItem.notes}</p>
+                </div>
+              )}
+              
+              <div>
+                <h4 className="text-sm font-medium">Last Updated</h4>
+                <p className="text-base text-muted-foreground">
+                  {new Date(viewItem.lastUpdated).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewDialog(false)}>
+              Close
+            </Button>
+            <Button onClick={() => handlePrintItem(viewItem!)}>
+              Print Details
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>
