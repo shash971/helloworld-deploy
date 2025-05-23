@@ -332,6 +332,114 @@ export default function Purchase() {
     }
   };
   
+  // Handle viewing purchase details
+  const handleViewDetails = (row: PurchaseItem) => {
+    setViewPurchase(row);
+    setViewDialog(true);
+  };
+  
+  // Handle editing a purchase
+  const handleEditPurchase = (row: PurchaseItem) => {
+    // Populate the form with the purchase data
+    form.reset({
+      poNumber: row.poNumber,
+      date: new Date(row.date).toISOString().split("T")[0],
+      vendorName: row.vendorName,
+      totalAmount: row.totalAmount.toString(),
+      paymentStatus: row.paymentStatus,
+      notes: ""
+    });
+    
+    setOpenDialog(true);
+  };
+  
+  // Handle printing purchase details
+  const handlePrintPurchase = (purchase: PurchaseItem) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: "Print Error",
+        description: "Unable to open print window. Please check your browser settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Purchase Details - ${purchase.poNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            h1 { color: #333; margin-bottom: 5px; }
+            .logo { margin-bottom: 20px; }
+            .info-section { margin-bottom: 20px; }
+            .info-row { display: flex; margin-bottom: 8px; }
+            .info-label { font-weight: bold; width: 150px; }
+            .info-value { flex: 1; }
+            .status { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 14px; }
+            .status-paid, .status-completed { background-color: #DFF0D8; color: #3C763D; }
+            .status-pending { background-color: #FCF8E3; color: #8A6D3B; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #777; }
+            @media print {
+              body { margin: 20px; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Purchase Order</h1>
+            <p>PO Number: ${purchase.poNumber}</p>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-row">
+              <div class="info-label">Vendor:</div>
+              <div class="info-value">${purchase.vendorName}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Date:</div>
+              <div class="info-value">${formatDate(purchase.date)}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Items:</div>
+              <div class="info-value">${purchase.items}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Total Amount:</div>
+              <div class="info-value">${formatCurrency(purchase.totalAmount)}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Payment Status:</div>
+              <div class="info-value">
+                <span class="status status-${purchase.paymentStatus.toLowerCase()}">${purchase.paymentStatus}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>This is a computer-generated document. No signature required.</p>
+            <p>Printed on: ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print();" style="padding: 10px 20px;">Print</button>
+          </div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Auto print after a short delay to allow the window to load
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   // Load purchases data when component mounts
   useEffect(() => {
     if (isAuthenticated()) {
@@ -372,6 +480,46 @@ export default function Purchase() {
       header: "Status",
       accessor: (row: PurchaseItem) => (
         <StatusBadge type="status" value={row.paymentStatus} />
+      ),
+    },
+    {
+      header: "Actions",
+      accessor: (row: PurchaseItem) => (
+        <div className="flex space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewDetails(row);
+            }}
+          >
+            <i className="fas fa-eye text-muted-foreground"></i>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditPurchase(row);
+            }}
+          >
+            <i className="fas fa-edit text-muted-foreground"></i>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePrintPurchase(row);
+            }}
+          >
+            <i className="fas fa-print text-muted-foreground"></i>
+          </Button>
+        </div>
       ),
     },
   ];
