@@ -1,110 +1,136 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { DataTable } from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/dashboard/status-badge";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { API_BASE_URL, getAuthHeader, isAuthenticated } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { SalesForm } from "@/components/sales/SalesForm";
-import { SalesList } from "@/components/sales/SalesList";
+
+// Form schema for sales creation
+const formSchema = z.object({
+  invoiceNumber: z.string(),
+  date: z.string().min(1, "Date is required"),
+  customerName: z.string().min(1, "Customer name is required"),
+  totalAmount: z.string().min(1, "Amount is required").refine(
+    (val) => !isNaN(Number(val)) && Number(val) > 0,
+    { message: "Amount must be a positive number" }
+  ),
+  paymentStatus: z.string(),
+  notes: z.string().optional(),
+});
+
+// Define interface for a sale item
+interface SaleItem {
+  id: number;
+  invoiceNumber: string;
+  date: Date;
+  customerName: string;
+  totalAmount: number;
+  paymentStatus: string;
+  items: string;
+}
 
 export default function Sales() {
   const [openDialog, setOpenDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [salesData, setSalesData] = useState<SaleItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Function to handle successful sale creation
-  const handleSaleSuccess = () => {
-    setOpenDialog(false);
-    toast({
-      title: "Success",
-      description: "Sale created successfully",
-      variant: "default",
-    });
-  };
+  // Form setup
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      invoiceNumber: `SL-${Math.floor(70000 + Math.random() * 9000)}`,
+      date: new Date().toISOString().split("T")[0],
+      customerName: "",
+      totalAmount: "",
+      paymentStatus: "Pending",
+      notes: "",
+    },
+  });
   
-
-  
-  // Mutation for creating a new sale with direct form data approach
-  const createSaleMutation = useMutation({
-    mutationFn: async (data: any) => {
-      // Log the exact data being sent to the backend
-      console.log("Sending sale data to backend:", data);
-      
-      // Create a direct fetch to the backend without using the apiRequest helper
+  // Fetch sales data from backend
+  const fetchSales = async () => {
+    setIsLoading(true);
+    try {
       const response = await fetch(`${API_BASE_URL}/sales/`, {
-        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           ...getAuthHeader()
-        },
-        body: JSON.stringify(data)
+        }
       });
       
-      // Check if the response is successful
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error creating sale:", errorText);
-        throw new Error(`Failed to create sale: ${errorText}`);
+        throw new Error(`Error fetching sales: ${response.status}`);
       }
       
-      return response.json();
-    },
-    onSuccess: () => {
-      // Invalidate the sales query to refetch the data
-      queryClient.invalidateQueries({ queryKey: ['/sales'] });
+      const data = await response.json();
+      console.log("Received sales data:", data);
       
-      toast({
-        title: "Success",
-        description: "Sale created successfully",
-        variant: "default",
-      });
-      
-      // Add a visual feedback before closing
-      setTimeout(() => {
-        setOpenDialog(false);
-      }, 500);
-      
-      // Add to local data temporarily for immediate feedback
-      const newSale = {
-        id: salesData.length + 1,
-        invoiceNumber: form.getValues("invoiceNumber"),
-        date: new Date(form.getValues("date")),
-        customerName: form.getValues("customerName"),
-        totalAmount: parseFloat(form.getValues("totalAmount") || "0"),
-        paymentStatus: form.getValues("paymentStatus"),
-        items: "Jewelry Item",
-      };
-      
-      setSalesData([newSale, ...salesData]);
-    },
-    onError: (error: any) => {
+      // Transform the backend data to our frontend format
+      if (Array.isArray(data) && data.length > 0) {
+        const transformedData = data.map((sale: any, index: number) => ({
+          id: sale.id || index + 1,
+          invoiceNumber: `SL-${70000 + (sale.id || index)}`,
+          date: new Date(sale.date),
+          customerName: sale.customer || 'Customer',
+          totalAmount: parseFloat(sale.total?.toString() || '0'),
+          paymentStatus: sale.pay_mode || 'Pending',
+          items: sale.iteam || 'Jewelry Item',
+        }));
+        
+        setSalesData(transformedData);
+      }
+    } catch (err) {
+      console.error("Error fetching sales:", err);
       toast({
         title: "Error",
-        description: error.message || "Failed to create sale",
+        description: err instanceof Error ? err.message : 'Error fetching sales data',
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
+  
+  // Load sales data when component mounts
+  useEffect(() => {
+    if (isAuthenticated()) {
+      fetchSales();
+    }
+  }, []);
   
   // Submit form data
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     
     try {
-      console.log("Form values submitted:", values);
-      
-      // Format the sale data exactly as the backend expects it
-      // This matches the SalesBase model in your backend
-      const todayDate = values.date || new Date().toISOString().split("T")[0];
-      
       // Format the date string properly as YYYY-MM-DD
-      const dateObj = new Date(todayDate);
+      const dateObj = new Date(values.date);
       const formattedDate = dateObj.toISOString().split('T')[0];
       
       // Create sale data object exactly matching the SQLite table structure
@@ -127,47 +153,32 @@ export default function Sales() {
         remark: values.notes || ""
       };
       
-      console.log("Formatted sale data for backend:", saleData);
+      console.log("Sending sale data to backend:", saleData);
       
-      try {
-        // Submit to backend API with direct fetch to ensure proper data format
-        console.log("About to send this data to the server:", JSON.stringify(saleData));
-        
-        const response = await fetch(`${API_BASE_URL}/sales/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeader()
-          },
-          body: JSON.stringify(saleData)
-        });
-        
-        console.log("Response status:", response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Failed to save sale:', errorText);
-          throw new Error(`Failed to save sale: ${response.status} - ${errorText}`);
-        }
-        
-        const result = await response.json();
-        console.log("Sale successfully created:", result);
-        
-        // After successful creation, refresh the sales data
-        await refetchSales();
-      } catch (fetchError) {
-        console.error("Error during fetch operation:", fetchError);
-        throw fetchError;
+      const response = await fetch(`${API_BASE_URL}/sales/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader()
+        },
+        body: JSON.stringify(saleData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create sale: ${errorText}`);
       }
       
-      // Show success message immediately for better user feedback
+      const result = await response.json();
+      console.log("Sale created successfully:", result);
+      
       toast({
         title: "Success",
         description: "Sale created successfully",
         variant: "default",
       });
       
-      // Reset the form with new defaults
+      // Reset the form
       form.reset({
         invoiceNumber: `SL-${Math.floor(70000 + Math.random() * 9000)}`,
         date: new Date().toISOString().split("T")[0],
@@ -180,21 +191,11 @@ export default function Sales() {
       // Close the dialog
       setOpenDialog(false);
       
-      // Add the new sale to the list immediately
-      const newSale = {
-        id: salesData.length + 1,
-        invoiceNumber: values.invoiceNumber,
-        date: new Date(todayDate),
-        customerName: values.customerName,
-        totalAmount: parseFloat(values.totalAmount) || 0,
-        paymentStatus: values.paymentStatus,
-        items: "Jewelry Item",
-      };
-      
-      setSalesData([newSale, ...salesData]);
+      // Refresh sales data
+      fetchSales();
       
     } catch (error) {
-      console.error("Failed to create sale:", error);
+      console.error("Sale creation error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create sale",
@@ -204,6 +205,44 @@ export default function Sales() {
       setIsSubmitting(false);
     }
   }
+  
+  // Column definition for the data table
+  const columns = [
+    {
+      header: "Invoice Number",
+      accessor: (row: SaleItem) => (
+        <span className="font-medium text-primary">{row.invoiceNumber}</span>
+      ),
+      sortable: true,
+    },
+    {
+      header: "Date",
+      accessor: (row: SaleItem) => formatDate(row.date),
+      sortable: true,
+    },
+    {
+      header: "Customer",
+      accessor: (row: SaleItem) => row.customerName,
+      sortable: true,
+    },
+    {
+      header: "Items",
+      accessor: (row: SaleItem) => row.items,
+    },
+    {
+      header: "Amount",
+      accessor: (row: SaleItem) => (
+        <span className="font-medium">{formatCurrency(row.totalAmount)}</span>
+      ),
+      sortable: true,
+    },
+    {
+      header: "Status",
+      accessor: (row: SaleItem) => (
+        <StatusBadge type="status" value={row.paymentStatus} />
+      ),
+    },
+  ];
   
   return (
     <MainLayout title="Sales">
@@ -224,7 +263,11 @@ export default function Sales() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-neutral-500">Total Sales (This Month)</p>
-                <h3 className="text-2xl font-semibold mt-1">{formatCurrency(718500)}</h3>
+                <h3 className="text-2xl font-semibold mt-1">
+                  {formatCurrency(
+                    salesData.reduce((total, sale) => total + sale.totalAmount, 0)
+                  )}
+                </h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <i className="fas fa-shopping-cart text-lg"></i>
@@ -238,7 +281,13 @@ export default function Sales() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-neutral-500">Pending Payments</p>
-                <h3 className="text-2xl font-semibold mt-1">{formatCurrency(45000)}</h3>
+                <h3 className="text-2xl font-semibold mt-1">
+                  {formatCurrency(
+                    salesData
+                      .filter(sale => sale.paymentStatus === 'Pending')
+                      .reduce((total, sale) => total + sale.totalAmount, 0)
+                  )}
+                </h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center text-warning">
                 <i className="fas fa-clock text-lg"></i>
@@ -252,7 +301,7 @@ export default function Sales() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-neutral-500">Total Transactions</p>
-                <h3 className="text-2xl font-semibold mt-1">6</h3>
+                <h3 className="text-2xl font-semibold mt-1">{salesData.length}</h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success">
                 <i className="fas fa-file-invoice text-lg"></i>
@@ -265,21 +314,31 @@ export default function Sales() {
       {/* Sales Data Table */}
       <Card>
         <CardContent className="p-0">
-          <DataTable
-            columns={columns}
-            data={salesData}
-            keyField="id"
-            actionComponent={(row) => (
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
-                  <i className="fas fa-eye mr-1"></i> View
-                </Button>
-                <Button variant="outline" size="sm">
-                  <i className="fas fa-print mr-1"></i> Print
-                </Button>
-              </div>
-            )}
-          />
+          {isLoading ? (
+            <div className="flex justify-center items-center h-32">
+              <p>Loading sales data...</p>
+            </div>
+          ) : salesData.length === 0 ? (
+            <div className="flex justify-center items-center h-32">
+              <p>No sales records found. Start by creating a new sale.</p>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={salesData}
+              keyField="id"
+              actionComponent={(row) => (
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm">
+                    <i className="fas fa-eye mr-1"></i> View
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <i className="fas fa-print mr-1"></i> Print
+                  </Button>
+                </div>
+              )}
+            />
+          )}
         </CardContent>
       </Card>
       
@@ -332,7 +391,7 @@ export default function Sales() {
                   <FormItem>
                     <FormLabel>Customer Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="Enter customer name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,7 +406,7 @@ export default function Sales() {
                     <FormItem>
                       <FormLabel>Total Amount (₹)</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="Enter amount" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -392,6 +451,7 @@ export default function Sales() {
                         rows={3} 
                         {...field} 
                         value={field.value || ''} 
+                        placeholder="Any additional notes" 
                       />
                     </FormControl>
                     <FormMessage />
@@ -400,7 +460,12 @@ export default function Sales() {
               />
               
               <DialogFooter>
-                <Button type="submit">Save Sale</Button>
+                <Button type="button" variant="outline" onClick={() => setOpenDialog(false)} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Save Sale"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
