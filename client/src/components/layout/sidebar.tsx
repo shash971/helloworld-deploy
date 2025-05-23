@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +14,28 @@ interface SidebarItemProps {
   href: string;
   isActive: boolean;
 }
+
+// Define role permissions
+const rolePermissions = {
+  admin: {
+    canAccessAll: true
+  },
+  manager: {
+    canAccess: ["dashboard", "sales", "purchase", "expenses", "loose-stock", "certified-stock", "jewellery-stock", 
+                "jewellery-management", "inventory-management", "igi-issue", "igi-receive", "memo-give", 
+                "memo-take", "reports", "user-management"]
+  },
+  sales: {
+    canAccess: ["dashboard", "sales", "memo-give", "memo-take", "reports"]
+  },
+  inventory: {
+    canAccess: ["dashboard", "loose-stock", "certified-stock", "jewellery-stock", "jewellery-management", 
+                "inventory-management", "igi-issue", "igi-receive"]
+  },
+  accountant: {
+    canAccess: ["dashboard", "expenses", "reports"]
+  }
+};
 
 function SidebarItem({ title, icon, href, isActive }: SidebarItemProps) {
   return (
@@ -34,6 +56,39 @@ function SidebarItem({ title, icon, href, isActive }: SidebarItemProps) {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
+  const [userRole, setUserRole] = useState<string>("admin"); // Default to admin for initial render
+  
+  // Get user role from localStorage on component mount
+  useEffect(() => {
+    const storedRole = localStorage.getItem("userRole");
+    if (storedRole) {
+      setUserRole(storedRole.toLowerCase());
+    }
+  }, []);
+  
+  // Function to check if user has access to a specific route
+  const hasAccessTo = (href: string): boolean => {
+    const path = href.replace("/", "");
+    
+    // Admin can access everything
+    if (userRole === "admin" || rolePermissions.admin.canAccessAll) {
+      return true;
+    }
+    
+    // Check role-specific permissions
+    const role = userRole as keyof typeof rolePermissions;
+    if (rolePermissions[role]) {
+      if ('canAccess' in rolePermissions[role]) {
+        return (rolePermissions[role] as any).canAccess.includes(path);
+      }
+      if ('canAccessAll' in rolePermissions[role] && (rolePermissions[role] as any).canAccessAll) {
+        return true;
+      }
+    }
+    
+    // Default: no access
+    return false;
+  };
   
   const sidebarItems = [
     {
@@ -174,6 +229,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <ul>
               {sidebarItems.map((item, idx) => {
                 if ("section" in item) {
+                  // Filter section items based on permissions
+                  const accessibleItems = item.items.filter(subItem => 
+                    hasAccessTo(subItem.href)
+                  );
+                  
+                  // Don't show section if no items are accessible
+                  if (accessibleItems.length === 0) {
+                    return null;
+                  }
+                  
                   return (
                     <React.Fragment key={idx}>
                       <li className="px-4 pt-5 pb-2">
@@ -181,7 +246,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {item.section}
                         </span>
                       </li>
-                      {item.items.map((subItem, subIdx) => (
+                      {accessibleItems.map((subItem, subIdx) => (
                         <SidebarItem
                           key={`${idx}-${subIdx}`}
                           title={subItem.title}
@@ -192,6 +257,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       ))}
                     </React.Fragment>
                   );
+                }
+                
+                // Only show top-level items the user has access to
+                if (!hasAccessTo(item.href)) {
+                  return null;
                 }
                 
                 return (

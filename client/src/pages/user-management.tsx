@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerUserInBackend } from "@/lib/userService";
+import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -277,6 +278,27 @@ const sampleRoles: Role[] = [
 
 export default function UserManagement() {
   const { toast } = useToast();
+  const [authorized, setAuthorized] = useState(false);
+  const [, setLocation] = useLocation();
+  
+  // Check if user has permission to access this page
+  useEffect(() => {
+    const userRole = localStorage.getItem("userRole")?.toLowerCase();
+    // Only admin and manager can access user management
+    if (userRole === "admin" || userRole === "manager") {
+      setAuthorized(true);
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access User Management",
+        variant: "destructive",
+      });
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 2000);
+    }
+  }, [toast, setLocation]);
   const [activeTab, setActiveTab] = useState("users");
   const [searchQuery, setSearchQuery] = useState("");
   
