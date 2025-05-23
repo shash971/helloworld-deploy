@@ -514,13 +514,14 @@ export default function Expenses() {
     );
   });
   
+  // State for viewing expense details
+  const [viewExpense, setViewExpense] = useState<ExpenseItem | null>(null);
+  const [viewDialog, setViewDialog] = useState(false);
+  
   // Handle viewing expense details
   const handleViewExpense = (expense: ExpenseItem) => {
-    // Show expense details (could open a modal or navigate to detail page)
-    toast({
-      title: "Expense Details",
-      description: `Viewing details for expense ${expense.expenseNumber}`,
-    });
+    setViewExpense(expense);
+    setViewDialog(true);
   };
   
   // Handle printing expense receipt
@@ -909,6 +910,65 @@ export default function Expenses() {
                 <p>Importing expense records...</p>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+        
+        {/* View Expense Dialog */}
+        <Dialog open={viewDialog} onOpenChange={setViewDialog}>
+          <DialogContent className="sm:max-w-[550px]">
+            <DialogHeader>
+              <DialogTitle>Expense Details</DialogTitle>
+              <DialogDescription>
+                Detailed information about expense {viewExpense?.expenseNumber}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {viewExpense && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium">Expense #</h4>
+                    <p className="text-base">{viewExpense.expenseNumber}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium">Date</h4>
+                    <p className="text-base">{format(viewExpense.date, 'dd MMMM yyyy')}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium">Party Name</h4>
+                  <p className="text-base">{viewExpense.partyName}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium">Category</h4>
+                    <p className="text-base">{viewExpense.category}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium">Amount</h4>
+                    <p className="text-base font-medium">₹{viewExpense.amount.toLocaleString()}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium">Payment Method</h4>
+                  <div className="mt-1">
+                    <StatusBadge type="payment" value={viewExpense.paymentMode} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewDialog(false)}>
+                Close
+              </Button>
+              <Button onClick={() => handlePrintExpense(viewExpense!)}>
+                Print Details
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
