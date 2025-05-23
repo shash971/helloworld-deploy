@@ -38,10 +38,29 @@ export default function RoleLogin() {
         // Get user information
         const userInfo = await getCurrentUser();
         
+        // Find this user in our local users list
+        const savedUsers = localStorage.getItem('usersData');
+        let localUserInfo = null;
+        
+        if (savedUsers) {
+          const users = JSON.parse(savedUsers);
+          // Try to find the user by username
+          const cleanUsername = username.includes('@') ? username.split('@')[0] : username;
+          
+          // Check for match using either full username or cleaned username
+          const matchedUser = users.find((u: any) => 
+            u.username === username || u.username === cleanUsername
+          );
+          
+          if (matchedUser) {
+            localUserInfo = matchedUser;
+          }
+        }
+        
         if (userInfo) {
           // Parse user info from the welcome message if available
-          let userName = "User";
-          if (userInfo.message) {
+          let userName = localUserInfo ? localUserInfo.name : "User";
+          if (userInfo.message && !localUserInfo) {
             // Try to extract name from "Welcome, [Name]!" format
             const nameMatch = userInfo.message.match(/Welcome, (.*?)!/);
             if (nameMatch && nameMatch[1]) {
@@ -49,9 +68,13 @@ export default function RoleLogin() {
             }
           }
           
+          // Use the role from local user data if available, otherwise fall back to backend role
+          const userRole = localUserInfo ? localUserInfo.role : (userInfo.role || role);
+          
           // Store user info in localStorage for persistence
-          localStorage.setItem("userRole", userInfo.role || role);
+          localStorage.setItem("userRole", userRole);
           localStorage.setItem("userFullName", userName);
+          localStorage.setItem("userUsername", username);
           
           toast({
             title: "Welcome back",
@@ -61,8 +84,14 @@ export default function RoleLogin() {
           // Redirect to dashboard
           setLocation("/");
         } else {
-          // If we got a token but couldn't get user info, still allow login
-          localStorage.setItem("userRole", role);
+          // If we got a token but couldn't get user info, still use local user data if available
+          const userRole = localUserInfo ? localUserInfo.role : role;
+          const userName = localUserInfo ? localUserInfo.name : "User";
+          
+          localStorage.setItem("userRole", userRole);
+          localStorage.setItem("userFullName", userName);
+          localStorage.setItem("userUsername", username);
+          
           toast({
             title: "Welcome",
             description: "You've successfully logged in",
