@@ -195,20 +195,22 @@ export function StockForm({ type, defaultValues, onSubmit, onCancel }: StockForm
     return `${prefix}${Math.floor(10000 + Math.random() * 90000)}`;
   }
 
-  // Handle form submission
-  const handleSubmit = (values: any) => {
+  // Handle form submission with direct callback to parent
+  const handleFormSubmit = (values: any) => {
+    console.log("Form submitted with values:", values);
+    
     // Process form values
     const processedValues = { ...values };
     
-    // Convert string numeric values to numbers
+    // Convert string numeric values to numbers for loose stock
     if (type === "loose" || type === "certified") {
-      processedValues.carat = Number(values.carat);
-      processedValues.costPrice = Number(values.costPrice);
-      processedValues.sellingPrice = Number(values.sellingPrice);
+      processedValues.carat = typeof values.carat === 'string' ? parseFloat(values.carat) : values.carat;
+      processedValues.costPrice = typeof values.costPrice === 'string' ? parseFloat(values.costPrice) : values.costPrice;
+      processedValues.sellingPrice = typeof values.sellingPrice === 'string' ? parseFloat(values.sellingPrice) : values.sellingPrice;
     }
     
     if (type === "loose") {
-      processedValues.quantity = Number(values.quantity);
+      processedValues.quantity = typeof values.quantity === 'string' ? parseInt(values.quantity, 10) : values.quantity;
     }
     
     if (type === "jewellery") {
