@@ -12,6 +12,9 @@ export async function registerUserInBackend(
     formData.append('username', username);
     formData.append('password', password);
     formData.append('role', role);
+    formData.append('is_active', 'true');  // Ensure user is active
+    
+    console.log(`Registering user: ${username} with role: ${role}`);
     
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',

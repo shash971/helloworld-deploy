@@ -127,11 +127,11 @@ export function Header({ title, onOpenSidebar }: HeaderProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/user-profile')}>
                 <i className="fas fa-user mr-2 text-neutral-500"></i> My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <i className="fas fa-cog mr-2 text-neutral-500"></i> Settings
+              <DropdownMenuItem onClick={() => setLocation('/user-profile?tab=security')}>
+                <i className="fas fa-cog mr-2 text-neutral-500"></i> Security Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-error" onClick={handleLogout}>

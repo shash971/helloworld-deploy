@@ -20,6 +20,15 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   
+  // Check for tab parameter in URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'security') {
+      setActiveTab('security');
+    }
+  }, []);
+  
   // State for user profile
   const [userProfile, setUserProfile] = useState({
     username: "",
