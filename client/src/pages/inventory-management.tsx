@@ -1,477 +1,506 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { DataTable } from "@/components/ui/data-table";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatusBadge } from "@/components/dashboard/status-badge";
-import { formatCurrency } from "@/lib/utils";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { StockImage } from "@/components/ui/stock-image";
+import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
 
-// Combined inventory data (simplified for this example)
-const inventoryData = {
-  loose: [
-    { id: 1, itemCode: "LS-10001", type: "Diamond", quantity: 1, carats: 1.02, value: 165000, status: "In Stock", location: "Main Store" },
-    { id: 2, itemCode: "LS-10002", type: "Diamond", quantity: 2, carats: 0.85, value: 110000, status: "In Stock", location: "Safe" },
-    { id: 3, itemCode: "LS-10003", type: "Ruby", quantity: 1, carats: 1.75, value: 145000, status: "In Stock", location: "Display Case" },
-    { id: 4, itemCode: "LS-10004", type: "Emerald", quantity: 1, carats: 1.25, value: 160000, status: "Memo Out", location: "N/A" },
-    { id: 5, itemCode: "LS-10005", type: "Diamond", quantity: 1, carats: 1.15, value: 195000, status: "In Stock", location: "Main Store" },
-  ],
-  certified: [
-    { id: 1, itemCode: "CS-20001", type: "Diamond", certificate: "IGI 123456789", carats: 1.52, value: 425000, status: "In Stock", location: "Safe" },
-    { id: 2, itemCode: "CS-20002", type: "Diamond", certificate: "GIA 2211567823", carats: 2.03, value: 575000, status: "In Stock", location: "Safe" },
-    { id: 3, itemCode: "CS-20003", type: "Diamond", certificate: "IGI 987654321", carats: 1.21, value: 240000, status: "IGI Certification", location: "N/A" },
-    { id: 4, itemCode: "CS-20004", type: "Ruby", certificate: "GRS 10567823", carats: 3.05, value: 750000, status: "In Stock", location: "Safe" },
-    { id: 5, itemCode: "CS-20005", type: "Sapphire", certificate: "SSEF 89562", carats: 4.25, value: 625000, status: "In Stock", location: "Safe" },
-  ],
-  jewellery: [
-    { id: 1, itemCode: "JS-30001", type: "Ring", name: "Diamond Solitaire Ring", metal: "Platinum", value: 250000, status: "In Stock", location: "Display Case" },
-    { id: 2, itemCode: "JS-30002", type: "Necklace", name: "Ruby and Diamond Necklace", metal: "Gold 18K", value: 425000, status: "In Stock", location: "Safe" },
-    { id: 3, itemCode: "JS-30003", type: "Bracelet", name: "Diamond Tennis Bracelet", metal: "White Gold", value: 350000, status: "Memo Out", location: "N/A" },
-    { id: 4, itemCode: "JS-30004", type: "Earrings", name: "Emerald Drop Earrings", metal: "Gold 22K", value: 240000, status: "In Stock", location: "Display Case" },
-    { id: 5, itemCode: "JS-30005", type: "Pendant", name: "Diamond Pendant", metal: "Rose Gold", value: 135000, status: "Sold", location: "N/A" },
-  ],
-};
+// Types for inventory items
+interface LooseStockItem {
+  id: number;
+  date: string;
+  branch: string;
+  iteam: string;
+  shape: string;
+  size: string;
+  total: number;
+  remark?: string;
+}
 
-// Location data for reporting
-const locationData = [
-  { location: "Safe", itemCount: 5, value: 2375000 },
-  { location: "Display Case", itemCount: 3, value: 545000 },
-  { location: "Main Store", itemCount: 2, value: 360000 },
-  { location: "Memo Out", itemCount: 2, value: 510000 },
-  { location: "IGI Certification", itemCount: 1, value: 240000 },
+interface CertifiedStockItem {
+  id: number;
+  date: string;
+  certi_no: string;
+  lab: string;
+  shape: string;
+  size: string;
+  color: string;
+  clarity: string;
+  rate: number;
+  total: number;
+  currency: string;
+  pay_mode: string;
+  remark?: string;
+}
+
+interface JewelleryStockItem {
+  id: number;
+  date: string;
+  item: string;
+  gross_wt: number;
+  net_wt: number;
+  purity: string;
+  type: string;
+  value: number;
+  remark?: string;
+}
+
+interface InventorySummary {
+  looseStock: {
+    count: number;
+    value: number;
+  };
+  certifiedStock: {
+    count: number;
+    value: number;
+  };
+  jewelleryStock: {
+    count: number;
+    value: number;
+  };
+  totalCount: number;
+  totalValue: number;
+}
+
+// Sample data - in a real app, this would be fetched from the API
+const looseStockData: LooseStockItem[] = [
+  { id: 1, date: "2025-05-20T00:00:00Z", branch: "Main Store", iteam: "Diamond", shape: "Round", size: "1ct", total: 85000, remark: "VS1-F" },
+  { id: 2, date: "2025-05-18T00:00:00Z", branch: "Main Store", iteam: "Diamond", shape: "Princess", size: "0.75ct", total: 62000, remark: "VS2-G" },
+  { id: 3, date: "2025-05-16T00:00:00Z", branch: "Showroom", iteam: "Diamond", shape: "Oval", size: "1.2ct", total: 95000, remark: "SI1-H" },
+  { id: 4, date: "2025-05-15T00:00:00Z", branch: "Workshop", iteam: "Ruby", shape: "Oval", size: "3ct", total: 45000, remark: "A Grade" },
+  { id: 5, date: "2025-05-12T00:00:00Z", branch: "Showroom", iteam: "Emerald", shape: "Square", size: "2ct", total: 55000, remark: "Fine Quality" },
 ];
 
-// Category data for reporting
-const categoryData = [
-  { category: "Diamond", itemCount: 7, value: 1760000 },
-  { category: "Ruby", itemCount: 2, value: 895000 },
-  { category: "Sapphire", itemCount: 1, value: 625000 },
-  { category: "Emerald", itemCount: 2, value: 400000 },
-  { category: "Gold Jewelry", itemCount: 3, value: 800000 },
+const certifiedStockData: CertifiedStockItem[] = [
+  { id: 1, date: "2025-05-21T00:00:00Z", certi_no: "GIA-124578", lab: "GIA", shape: "Round", size: "1.5ct", color: "F", clarity: "VS1", rate: 75000, total: 112500, currency: "INR", pay_mode: "Cash", remark: "Excellent Cut" },
+  { id: 2, date: "2025-05-19T00:00:00Z", certi_no: "IGI-873345", lab: "IGI", shape: "Princess", size: "1ct", color: "G", clarity: "VS2", rate: 65000, total: 65000, currency: "INR", pay_mode: "Bank Transfer", remark: "Very Good Cut" },
+  { id: 3, date: "2025-05-17T00:00:00Z", certi_no: "GIA-992871", lab: "GIA", shape: "Emerald", size: "1.8ct", color: "D", clarity: "VVS2", rate: 92000, total: 165600, currency: "INR", pay_mode: "Credit Card", remark: "Premium" },
+  { id: 4, date: "2025-05-15T00:00:00Z", certi_no: "IGI-129384", lab: "IGI", shape: "Oval", size: "1.25ct", color: "E", clarity: "VS1", rate: 68000, total: 85000, currency: "INR", pay_mode: "Cash", remark: "" },
+  { id: 5, date: "2025-05-10T00:00:00Z", certi_no: "HRD-758493", lab: "HRD", shape: "Cushion", size: "2ct", color: "F", clarity: "SI1", rate: 58000, total: 116000, currency: "INR", pay_mode: "Bank Transfer", remark: "Good Cut" },
+];
+
+const jewelleryStockData: JewelleryStockItem[] = [
+  { id: 1, date: "2025-05-22T00:00:00Z", item: "Diamond Ring", gross_wt: 5.4, net_wt: 4.8, purity: "18K", type: "Gold", value: 185000, remark: "Solitaire Setting" },
+  { id: 2, date: "2025-05-20T00:00:00Z", item: "Diamond Necklace", gross_wt: 18.5, net_wt: 15.2, purity: "22K", type: "Gold", value: 320000, remark: "Statement Piece" },
+  { id: 3, date: "2025-05-18T00:00:00Z", item: "Ruby Earrings", gross_wt: 6.2, net_wt: 5.5, purity: "18K", type: "White Gold", value: 125000, remark: "Drop Style" },
+  { id: 4, date: "2025-05-15T00:00:00Z", item: "Tennis Bracelet", gross_wt: 12.8, net_wt: 10.5, purity: "14K", type: "White Gold", value: 235000, remark: "Diamond Studded" },
+  { id: 5, date: "2025-05-12T00:00:00Z", item: "Sapphire Pendant", gross_wt: 4.6, net_wt: 3.8, purity: "18K", type: "Yellow Gold", value: 95000, remark: "Cushion Cut" },
 ];
 
 export default function InventoryManagement() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [timeframe, setTimeframe] = useState("all");
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("summary");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLocalStorageLoaded, setIsLocalStorageLoaded] = useState(false);
   
-  // Calculate inventory totals
-  const totalItems = 
-    inventoryData.loose.length + 
-    inventoryData.certified.length + 
-    inventoryData.jewellery.length;
+  // State for inventory data
+  const [looseStock, setLooseStock] = useState<LooseStockItem[]>([]);
+  const [certifiedStock, setCertifiedStock] = useState<CertifiedStockItem[]>([]);
+  const [jewelleryStock, setJewelleryStock] = useState<JewelleryStockItem[]>([]);
   
-  const totalValue = 
-    inventoryData.loose.reduce((sum, item) => sum + item.value, 0) +
-    inventoryData.certified.reduce((sum, item) => sum + item.value, 0) +
-    inventoryData.jewellery.reduce((sum, item) => sum + item.value, 0);
+  // Load data from localStorage (if available) or use sample data
+  useEffect(() => {
+    const loadedLooseStock = localStorage.getItem('looseStockData');
+    const loadedCertifiedStock = localStorage.getItem('certifiedStockData');
+    const loadedJewelleryStock = localStorage.getItem('jewelleryStockData');
+    
+    setLooseStock(loadedLooseStock ? JSON.parse(loadedLooseStock) : looseStockData);
+    setCertifiedStock(loadedCertifiedStock ? JSON.parse(loadedCertifiedStock) : certifiedStockData);
+    setJewelleryStock(loadedJewelleryStock ? JSON.parse(loadedJewelleryStock) : jewelleryStockData);
+    
+    setIsLocalStorageLoaded(true);
+  }, []);
   
-  // Loose stock columns
-  const looseColumns = [
-    {
-      header: "Item Code",
-      accessor: (row: any) => (
-        <span className="font-medium text-primary">{row.itemCode}</span>
-      ),
-      sortable: true,
+  // Calculate inventory summary
+  const inventorySummary: InventorySummary = {
+    looseStock: {
+      count: looseStock.length,
+      value: looseStock.reduce((sum, item) => sum + item.total, 0),
     },
-    {
-      header: "Type",
-      accessor: "type",
-      sortable: true,
+    certifiedStock: {
+      count: certifiedStock.length,
+      value: certifiedStock.reduce((sum, item) => sum + item.total, 0),
     },
-    {
-      header: "Carats",
-      accessor: (row: any) => `${row.carats} ct`,
-      sortable: true,
+    jewelleryStock: {
+      count: jewelleryStock.length,
+      value: jewelleryStock.reduce((sum, item) => sum + item.value, 0),
     },
-    {
-      header: "Quantity",
-      accessor: "quantity",
-      sortable: true,
+    get totalCount() {
+      return this.looseStock.count + this.certifiedStock.count + this.jewelleryStock.count;
     },
-    {
-      header: "Value",
-      accessor: (row: any) => (
-        <span className="font-medium">{formatCurrency(row.value)}</span>
-      ),
-      sortable: true,
+    get totalValue() {
+      return this.looseStock.value + this.certifiedStock.value + this.jewelleryStock.value;
     },
-    {
-      header: "Status",
-      accessor: (row: any) => (
-        <StatusBadge type="status" value={row.status} />
-      ),
-    },
-    {
-      header: "Location",
-      accessor: "location",
-    },
-  ];
+  };
   
-  // Certified stock columns
-  const certifiedColumns = [
-    {
-      header: "Item Code",
-      accessor: (row: any) => (
-        <span className="font-medium text-primary">{row.itemCode}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "Type",
-      accessor: "type",
-      sortable: true,
-    },
-    {
-      header: "Certificate",
-      accessor: "certificate",
-      sortable: true,
-    },
-    {
-      header: "Carats",
-      accessor: (row: any) => `${row.carats} ct`,
-      sortable: true,
-    },
-    {
-      header: "Value",
-      accessor: (row: any) => (
-        <span className="font-medium">{formatCurrency(row.value)}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "Status",
-      accessor: (row: any) => (
-        <StatusBadge type="status" value={row.status} />
-      ),
-    },
-    {
-      header: "Location",
-      accessor: "location",
-    },
-  ];
+  // Filter data based on search query
+  const filteredLooseStock = looseStock.filter(item => 
+    searchQuery === "" || 
+    Object.values(item).some(value => 
+      value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
   
-  // Jewellery columns
-  const jewelleryColumns = [
-    {
-      header: "Item Code",
-      accessor: (row: any) => (
-        <span className="font-medium text-primary">{row.itemCode}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "Name",
-      accessor: "name",
-      sortable: true,
-    },
-    {
-      header: "Type",
-      accessor: "type",
-      sortable: true,
-    },
-    {
-      header: "Metal",
-      accessor: "metal",
-    },
-    {
-      header: "Value",
-      accessor: (row: any) => (
-        <span className="font-medium">{formatCurrency(row.value)}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "Status",
-      accessor: (row: any) => (
-        <StatusBadge type="status" value={row.status} />
-      ),
-    },
-    {
-      header: "Location",
-      accessor: "location",
-    },
-  ];
+  const filteredCertifiedStock = certifiedStock.filter(item => 
+    searchQuery === "" || 
+    Object.values(item).some(value => 
+      value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
   
-  // Format for location and category tables
-  const analysisColumns = [
-    {
-      header: "Name",
-      accessor: (row: any) => row.location || row.category,
-      sortable: true,
-    },
-    {
-      header: "Items",
-      accessor: "itemCount",
-      sortable: true,
-    },
-    {
-      header: "Value",
-      accessor: (row: any) => (
-        <span className="font-medium">{formatCurrency(row.value)}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "% of Total",
-      accessor: (row: any) => (
-        <div className="w-full">
-          <div className="flex justify-between mb-1">
-            <span className="text-xs">{((row.value / totalValue) * 100).toFixed(1)}%</span>
-          </div>
-          <Progress value={(row.value / totalValue) * 100} className="h-2" />
-        </div>
-      ),
-    },
-  ];
+  const filteredJewelleryStock = jewelleryStock.filter(item => 
+    searchQuery === "" || 
+    Object.values(item).some(value => 
+      value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
   
+  // Generate inventory distribution data for display
+  const calculateInventoryDistribution = () => {
+    const total = inventorySummary.totalValue;
+    
+    if (total === 0) return [
+      { category: "Loose Stock", value: 0, percentage: 0 },
+      { category: "Certified Stock", value: 0, percentage: 0 },
+      { category: "Jewellery Stock", value: 0, percentage: 0 },
+    ];
+    
+    return [
+      { 
+        category: "Loose Stock", 
+        value: inventorySummary.looseStock.value,
+        percentage: Math.round((inventorySummary.looseStock.value / total) * 100)
+      },
+      { 
+        category: "Certified Stock", 
+        value: inventorySummary.certifiedStock.value,
+        percentage: Math.round((inventorySummary.certifiedStock.value / total) * 100)
+      },
+      { 
+        category: "Jewellery Stock", 
+        value: inventorySummary.jewelleryStock.value,
+        percentage: Math.round((inventorySummary.jewelleryStock.value / total) * 100)
+      },
+    ];
+  };
+  
+  const inventoryDistribution = calculateInventoryDistribution();
+  
+  // Get date of most recent item added to inventory
+  const getMostRecentDate = () => {
+    const allDates = [
+      ...looseStock.map(item => new Date(item.date)),
+      ...certifiedStock.map(item => new Date(item.date)),
+      ...jewelleryStock.map(item => new Date(item.date)),
+    ];
+    
+    if (allDates.length === 0) return 'No items';
+    
+    const mostRecent = new Date(Math.max(...allDates.map(date => date.getTime())));
+    return format(mostRecent, 'dd MMM yyyy');
+  };
+
   return (
     <MainLayout title="Inventory Management">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-800">Inventory Management</h1>
-          <p className="text-neutral-500">Real-time stock levels across all modules</p>
+          <h1 className="text-2xl font-bold text-neutral-800">Inventory Management</h1>
+          <p className="text-neutral-500">Comprehensive view of all inventory items across categories</p>
         </div>
-        <div>
-          <Select value={timeframe} onValueChange={setTimeframe}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Time" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="quarter">This Quarter</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder="Search inventory..."
+            className="max-w-xs"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Button onClick={() => setSearchQuery("")} variant="outline" disabled={!searchQuery}>
+            Clear
+          </Button>
         </div>
       </div>
       
-      {/* Inventory Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-neutral-500">Total Inventory Value</p>
-                <h3 className="text-2xl font-semibold mt-1">{formatCurrency(totalValue)}</h3>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <i className="fas fa-coins text-lg"></i>
-              </div>
-            </div>
+            <h3 className="text-lg font-semibold text-neutral-600">Total Inventory Value</h3>
+            <p className="text-3xl font-bold text-primary mt-2">₹{formatCurrency(inventorySummary.totalValue)}</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-neutral-500">Total Items</p>
-                <h3 className="text-2xl font-semibold mt-1">{totalItems}</h3>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center text-info">
-                <i className="fas fa-cubes text-lg"></i>
-              </div>
-            </div>
+            <h3 className="text-lg font-semibold text-neutral-600">Total Items</h3>
+            <p className="text-3xl font-bold text-primary mt-2">{inventorySummary.totalCount}</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-neutral-500">Items on Memo</p>
-                <h3 className="text-2xl font-semibold mt-1">2</h3>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center text-warning">
-                <i className="fas fa-paper-plane text-lg"></i>
-              </div>
-            </div>
+            <h3 className="text-lg font-semibold text-neutral-600">Most Valuable Category</h3>
+            <p className="text-3xl font-bold text-primary mt-2">
+              {inventoryDistribution.sort((a, b) => b.value - a.value)[0]?.category || 'N/A'}
+            </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardContent className="pt-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-neutral-500">Items in Certification</p>
-                <h3 className="text-2xl font-semibold mt-1">1</h3>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                <i className="fas fa-certificate text-lg"></i>
-              </div>
-            </div>
+            <h3 className="text-lg font-semibold text-neutral-600">Latest Addition</h3>
+            <p className="text-3xl font-bold text-primary mt-2">{getMostRecentDate()}</p>
           </CardContent>
         </Card>
       </div>
       
-      {/* Featured Store Image */}
-      <div className="mb-6">
+      {/* Inventory Overview */}
+      <div className="mb-8">
         <Card>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-1 md:grid-cols-3">
-              <div className="md:col-span-1">
-                <StockImage type="jewelry-store" className="h-full rounded-l-lg md:rounded-r-none rounded-r-lg" />
-              </div>
-              <div className="md:col-span-2 p-6">
-                <h3 className="text-lg font-semibold text-neutral-800">Comprehensive Inventory Management</h3>
-                <p className="text-neutral-600 mt-2 mb-4">
-                  Track all your inventory in real-time across loose stones, certified gemstones, and 
-                  finished jewelry. Monitor stock levels, locations, values, and status to maintain optimal 
-                  inventory control and make informed business decisions.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="border border-neutral-200 rounded-md p-3">
-                    <p className="text-xs text-neutral-500">Loose Stones</p>
-                    <p className="font-medium">{inventoryData.loose.length} items</p>
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold text-neutral-800 mb-4">Inventory Distribution</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {inventoryDistribution.map((item, index) => (
+                <div key={index} className="border rounded-md p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">{item.category}</h4>
+                    <Badge variant="outline">{item.percentage}%</Badge>
                   </div>
-                  <div className="border border-neutral-200 rounded-md p-3">
-                    <p className="text-xs text-neutral-500">Certified Stones</p>
-                    <p className="font-medium">{inventoryData.certified.length} items</p>
-                  </div>
-                  <div className="border border-neutral-200 rounded-md p-3">
-                    <p className="text-xs text-neutral-500">Jewelry Pieces</p>
-                    <p className="font-medium">{inventoryData.jewellery.length} items</p>
+                  <p className="text-2xl font-bold">₹{formatCurrency(item.value)}</p>
+                  <p className="text-sm text-neutral-500 mt-1">{
+                    item.category === "Loose Stock" 
+                      ? inventorySummary.looseStock.count 
+                      : item.category === "Certified Stock" 
+                        ? inventorySummary.certifiedStock.count 
+                        : inventorySummary.jewelleryStock.count
+                  } items</p>
+                  <div className="w-full bg-neutral-100 rounded-full h-2.5 mt-2">
+                    <div 
+                      className="bg-primary h-2.5 rounded-full" 
+                      style={{ width: `${item.percentage}%` }}
+                    ></div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
       </div>
       
       {/* Inventory Tabs */}
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-4 w-full mb-6">
+          <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="loose">Loose Stock</TabsTrigger>
           <TabsTrigger value="certified">Certified Stock</TabsTrigger>
-          <TabsTrigger value="jewellery">Jewellery</TabsTrigger>
-          <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="jewellery">Jewellery Stock</TabsTrigger>
         </TabsList>
         
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold text-neutral-800 mb-4">Inventory Distribution</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">Loose Stock</span>
-                      <span className="text-sm font-medium">
-                        {formatCurrency(inventoryData.loose.reduce((sum, item) => sum + item.value, 0))}
-                      </span>
-                    </div>
-                    <Progress value={19} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">Certified Stock</span>
-                      <span className="text-sm font-medium">
-                        {formatCurrency(inventoryData.certified.reduce((sum, item) => sum + item.value, 0))}
-                      </span>
-                    </div>
-                    <Progress value={64} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">Jewellery</span>
-                      <span className="text-sm font-medium">
-                        {formatCurrency(inventoryData.jewellery.reduce((sum, item) => sum + item.value, 0))}
-                      </span>
-                    </div>
-                    <Progress value={17} className="h-2" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold text-neutral-800 mb-4">Status Distribution</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">In Stock</span>
-                      <span className="text-sm font-medium">10 items</span>
-                    </div>
-                    <Progress value={71} className="h-2 bg-neutral-100">
-                      <div className="h-full bg-success rounded-full" style={{ width: '71%' }} />
-                    </Progress>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">Memo Out</span>
-                      <span className="text-sm font-medium">2 items</span>
-                    </div>
-                    <Progress value={15} className="h-2 bg-neutral-100">
-                      <div className="h-full bg-warning rounded-full" style={{ width: '15%' }} />
-                    </Progress>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">IGI Certification</span>
-                      <span className="text-sm font-medium">1 item</span>
-                    </div>
-                    <Progress value={7} className="h-2 bg-neutral-100">
-                      <div className="h-full bg-info rounded-full" style={{ width: '7%' }} />
-                    </Progress>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm">Sold (Not Removed)</span>
-                      <span className="text-sm font-medium">1 item</span>
-                    </div>
-                    <Progress value={7} className="h-2 bg-neutral-100">
-                      <div className="h-full bg-error rounded-full" style={{ width: '7%' }} />
-                    </Progress>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
+        {/* Summary Tab */}
+        <TabsContent value="summary">
           <Card>
-            <CardContent className="pt-6">
-              <h3 className="font-semibold text-neutral-800 mb-4">Recent Inventory Changes</h3>
-              <div className="space-y-4">
-                <div className="border-l-4 border-success pl-4 py-1">
-                  <p className="text-sm">Added <span className="font-medium">Diamond Solitaire Ring (JS-30001)</span> to inventory</p>
-                  <p className="text-xs text-neutral-500">Today, 10:30 AM</p>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Inventory Highlights</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div>
+                        <p className="font-medium">Loose Stock</p>
+                        <p className="text-sm text-neutral-500">{inventorySummary.looseStock.count} items</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₹{formatCurrency(inventorySummary.looseStock.value)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div>
+                        <p className="font-medium">Certified Stock</p>
+                        <p className="text-sm text-neutral-500">{inventorySummary.certifiedStock.count} items</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₹{formatCurrency(inventorySummary.certifiedStock.value)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div>
+                        <p className="font-medium">Jewellery Stock</p>
+                        <p className="text-sm text-neutral-500">{inventorySummary.jewelleryStock.count} items</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₹{formatCurrency(inventorySummary.jewelleryStock.value)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-primary/10 rounded-md">
+                      <div>
+                        <p className="font-medium">Total Inventory</p>
+                        <p className="text-sm text-neutral-500">{inventorySummary.totalCount} items</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₹{formatCurrency(inventorySummary.totalValue)}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="border-l-4 border-warning pl-4 py-1">
-                  <p className="text-sm">Moved <span className="font-medium">Diamond Tennis Bracelet (JS-30003)</span> to Memo Out</p>
-                  <p className="text-xs text-neutral-500">Yesterday, 2:15 PM</p>
-                </div>
-                <div className="border-l-4 border-info pl-4 py-1">
-                  <p className="text-sm">Sent <span className="font-medium">Diamond (CS-20003)</span> for IGI Certification</p>
-                  <p className="text-xs text-neutral-500">July 12, 2023</p>
-                </div>
-                <div className="border-l-4 border-error pl-4 py-1">
-                  <p className="text-sm">Marked <span className="font-medium">Diamond Pendant (JS-30005)</span> as Sold</p>
-                  <p className="text-xs text-neutral-500">July 8, 2023</p>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Recent Additions</h3>
+                  <div className="space-y-3">
+                    {[
+                      ...looseStock.map(item => ({ ...item, type: 'loose' })),
+                      ...certifiedStock.map(item => ({ ...item, type: 'certified' })),
+                      ...jewelleryStock.map(item => ({ ...item, type: 'jewellery' }))
+                    ]
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 5)
+                      .map((item, index) => (
+                        <div key={index} className="flex items-center p-3 border rounded-md">
+                          <div className="mr-3">
+                            <Badge variant={
+                              item.type === 'loose' 
+                                ? 'outline' 
+                                : item.type === 'certified' 
+                                  ? 'default' 
+                                  : 'secondary'
+                            }>
+                              {item.type === 'loose' 
+                                ? 'Loose' 
+                                : item.type === 'certified' 
+                                  ? 'Cert' 
+                                  : 'Jewel'}
+                            </Badge>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">{
+                              item.type === 'loose' 
+                                ? (item as any).iteam + ' - ' + (item as any).shape
+                                : item.type === 'certified' 
+                                  ? (item as any).certi_no
+                                  : (item as any).item
+                            }</p>
+                            <p className="text-xs text-neutral-500">{format(new Date(item.date), 'dd MMM yyyy')}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">₹{formatCurrency(
+                              item.type === 'loose' 
+                                ? (item as any).total
+                                : item.type === 'certified' 
+                                  ? (item as any).total
+                                  : (item as any).value
+                            )}</p>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-neutral-200 text-center">
-                <Button variant="link" className="text-sm">View All Inventory Changes</Button>
+              
+              <Separator className="my-6" />
+              
+              <h3 className="text-lg font-semibold mb-4">Inventory Composition</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="border rounded-md p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Stock Types</h4>
+                    <Badge variant="outline">{inventorySummary.totalCount} Total</Badge>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                      <span className="flex-1">Loose Stock</span>
+                      <span className="font-medium">{inventorySummary.looseStock.count}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <span className="flex-1">Certified Stock</span>
+                      <span className="font-medium">{inventorySummary.certifiedStock.count}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+                      <span className="flex-1">Jewellery Stock</span>
+                      <span className="font-medium">{inventorySummary.jewelleryStock.count}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Value Distribution</h4>
+                    <Badge variant="outline">₹{formatCurrency(inventorySummary.totalValue)}</Badge>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                      <span className="flex-1">Loose Stock</span>
+                      <span className="font-medium">₹{formatCurrency(inventorySummary.looseStock.value)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <span className="flex-1">Certified Stock</span>
+                      <span className="font-medium">₹{formatCurrency(inventorySummary.certifiedStock.value)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+                      <span className="flex-1">Jewellery Stock</span>
+                      <span className="font-medium">₹{formatCurrency(inventorySummary.jewelleryStock.value)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Average Value</h4>
+                    <Badge variant="outline">Per Item</Badge>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                      <span className="flex-1">Loose Stock</span>
+                      <span className="font-medium">₹{formatCurrency(
+                        inventorySummary.looseStock.count > 0 
+                          ? inventorySummary.looseStock.value / inventorySummary.looseStock.count 
+                          : 0
+                      )}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <span className="flex-1">Certified Stock</span>
+                      <span className="font-medium">₹{formatCurrency(
+                        inventorySummary.certifiedStock.count > 0 
+                          ? inventorySummary.certifiedStock.value / inventorySummary.certifiedStock.count 
+                          : 0
+                      )}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+                      <span className="flex-1">Jewellery Stock</span>
+                      <span className="font-medium">₹{formatCurrency(
+                        inventorySummary.jewelleryStock.count > 0 
+                          ? inventorySummary.jewelleryStock.value / inventorySummary.jewelleryStock.count 
+                          : 0
+                      )}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -480,27 +509,51 @@ export default function InventoryManagement() {
         {/* Loose Stock Tab */}
         <TabsContent value="loose">
           <Card>
-            <CardContent className="p-0">
-              <div className="p-6 border-b border-neutral-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-neutral-800">Loose Stock Inventory</h3>
-                  <Button variant="outline" size="sm">
-                    <i className="fas fa-file-export mr-2"></i> Export
-                  </Button>
-                </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Loose Stock Inventory</h3>
+                <Button variant="outline" asChild>
+                  <a href="/loose-stock">Manage Loose Stock</a>
+                </Button>
               </div>
-              <DataTable
-                columns={looseColumns}
-                data={inventoryData.loose}
-                keyField="id"
-                actionComponent={(row) => (
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <i className="fas fa-eye mr-1"></i> View
-                    </Button>
-                  </div>
-                )}
-              />
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Shape</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                      <TableHead>Remarks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLooseStock.length > 0 ? (
+                      filteredLooseStock.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.id}</TableCell>
+                          <TableCell>{format(new Date(item.date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{item.branch}</TableCell>
+                          <TableCell>{item.iteam}</TableCell>
+                          <TableCell>{item.shape}</TableCell>
+                          <TableCell>{item.size}</TableCell>
+                          <TableCell className="text-right">₹{item.total.toLocaleString()}</TableCell>
+                          <TableCell>{item.remark || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-6 text-neutral-500">
+                          {searchQuery ? 'No matching loose stock items found.' : 'No loose stock items available.'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -508,170 +561,109 @@ export default function InventoryManagement() {
         {/* Certified Stock Tab */}
         <TabsContent value="certified">
           <Card>
-            <CardContent className="p-0">
-              <div className="p-6 border-b border-neutral-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-neutral-800">Certified Stock Inventory</h3>
-                  <Button variant="outline" size="sm">
-                    <i className="fas fa-file-export mr-2"></i> Export
-                  </Button>
-                </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Certified Stock Inventory</h3>
+                <Button variant="outline" asChild>
+                  <a href="/certified-stock">Manage Certified Stock</a>
+                </Button>
               </div>
-              <DataTable
-                columns={certifiedColumns}
-                data={inventoryData.certified}
-                keyField="id"
-                actionComponent={(row) => (
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <i className="fas fa-eye mr-1"></i> View
-                    </Button>
-                  </div>
-                )}
-              />
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Certificate</TableHead>
+                      <TableHead>Lab</TableHead>
+                      <TableHead>Shape</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Color</TableHead>
+                      <TableHead>Clarity</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCertifiedStock.length > 0 ? (
+                      filteredCertifiedStock.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.id}</TableCell>
+                          <TableCell>{format(new Date(item.date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{item.certi_no}</TableCell>
+                          <TableCell>{item.lab}</TableCell>
+                          <TableCell>{item.shape}</TableCell>
+                          <TableCell>{item.size}</TableCell>
+                          <TableCell>{item.color}</TableCell>
+                          <TableCell>{item.clarity}</TableCell>
+                          <TableCell className="text-right">₹{item.total.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-6 text-neutral-500">
+                          {searchQuery ? 'No matching certified stock items found.' : 'No certified stock items available.'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        {/* Jewellery Tab */}
+        {/* Jewellery Stock Tab */}
         <TabsContent value="jewellery">
           <Card>
-            <CardContent className="p-0">
-              <div className="p-6 border-b border-neutral-200">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-neutral-800">Jewellery Inventory</h3>
-                  <Button variant="outline" size="sm">
-                    <i className="fas fa-file-export mr-2"></i> Export
-                  </Button>
-                </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Jewellery Stock Inventory</h3>
+                <Button variant="outline" asChild>
+                  <a href="/jewellery-stock">Manage Jewellery Stock</a>
+                </Button>
               </div>
-              <DataTable
-                columns={jewelleryColumns}
-                data={inventoryData.jewellery}
-                keyField="id"
-                actionComponent={(row) => (
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      <i className="fas fa-eye mr-1"></i> View
-                    </Button>
-                  </div>
-                )}
-              />
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Gross Wt</TableHead>
+                      <TableHead>Net Wt</TableHead>
+                      <TableHead>Purity</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                      <TableHead>Remarks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredJewelleryStock.length > 0 ? (
+                      filteredJewelleryStock.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.id}</TableCell>
+                          <TableCell>{format(new Date(item.date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{item.item}</TableCell>
+                          <TableCell>{item.type}</TableCell>
+                          <TableCell>{item.gross_wt}g</TableCell>
+                          <TableCell>{item.net_wt}g</TableCell>
+                          <TableCell>{item.purity}</TableCell>
+                          <TableCell className="text-right">₹{item.value.toLocaleString()}</TableCell>
+                          <TableCell>{item.remark || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-6 text-neutral-500">
+                          {searchQuery ? 'No matching jewellery stock items found.' : 'No jewellery stock items available.'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-        
-        {/* Analysis Tab */}
-        <TabsContent value="analysis" className="space-y-6">
-          <Card>
-            <CardContent className="p-0">
-              <div className="p-6 border-b border-neutral-200">
-                <h3 className="font-semibold text-neutral-800">Inventory by Location</h3>
-              </div>
-              <DataTable
-                columns={analysisColumns}
-                data={locationData}
-                keyField="location"
-              />
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-0">
-              <div className="p-6 border-b border-neutral-200">
-                <h3 className="font-semibold text-neutral-800">Inventory by Category</h3>
-              </div>
-              <DataTable
-                columns={analysisColumns}
-                data={categoryData}
-                keyField="category"
-              />
-            </CardContent>
-          </Card>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold text-neutral-800 mb-4">Inventory Alerts</h3>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-warning/10 text-warning p-2 rounded-full">
-                      <i className="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Low Stock Alert</p>
-                      <p className="text-xs text-neutral-600">
-                        Diamond Round Cut (1.0-1.5ct) stock is running low
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-error/10 text-error p-2 rounded-full">
-                      <i className="fas fa-clock"></i>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Memo Overdue</p>
-                      <p className="text-xs text-neutral-600">
-                        2 items have exceeded the expected return date
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-info/10 text-info p-2 rounded-full">
-                      <i className="fas fa-chart-line"></i>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">High Value Concentration</p>
-                      <p className="text-xs text-neutral-600">
-                        65% of inventory value is in certified diamonds
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="font-semibold text-neutral-800 mb-4">Inventory Recommendations</h3>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-success/10 text-success p-2 rounded-full">
-                      <i className="fas fa-shopping-cart"></i>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Purchase Recommendation</p>
-                      <p className="text-xs text-neutral-600">
-                        Order more round diamonds (1.0-1.5ct) based on sales data
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-secondary/10 text-secondary p-2 rounded-full">
-                      <i className="fas fa-tags"></i>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Pricing Adjustment</p>
-                      <p className="text-xs text-neutral-600">
-                        Consider price adjustments for slow-moving emerald items
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="bg-primary/10 text-primary p-2 rounded-full">
-                      <i className="fas fa-sync-alt"></i>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Display Rotation</p>
-                      <p className="text-xs text-neutral-600">
-                        Rotate sapphire items to display case to improve visibility
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
       </Tabs>
     </MainLayout>
