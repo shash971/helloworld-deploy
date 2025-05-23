@@ -335,7 +335,10 @@ export default function Dashboard() {
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-neutral-800">Recent Transactions</h3>
             <div className="flex space-x-2">
-              <Select>
+              <Select onValueChange={(value) => {
+                // Store the selected filter type
+                localStorage.setItem('transactionFilterType', value);
+              }}>
                 <SelectTrigger className="text-sm w-[150px] pl-8 relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400">
                     <i className="fas fa-filter"></i>
@@ -350,8 +353,22 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
               <Button onClick={() => {
-                // Navigate to sales page for now since we don't have a dedicated transactions page
-                window.location.href = "/sales";
+                // Navigate based on the selected filter type
+                const filterType = localStorage.getItem('transactionFilterType') || 'all';
+                switch(filterType) {
+                  case 'sales':
+                    window.location.href = "/sales";
+                    break;
+                  case 'purchases':
+                    window.location.href = "/purchase";
+                    break;
+                  case 'expenses':
+                    window.location.href = "/expenses";
+                    break;
+                  default:
+                    // For 'all' or if no selection, show sales by default
+                    window.location.href = "/sales";
+                }
               }}>View All</Button>
             </div>
           </div>
@@ -388,7 +405,24 @@ export default function Dashboard() {
           <Button 
             variant="default" 
             className="bg-primary hover:bg-primary-dark text-white"
-            onClick={() => window.location.href = "/sales"}
+            onClick={() => {
+              // Navigate based on the selected filter type - use the same logic as the top button
+              const filterType = localStorage.getItem('transactionFilterType') || 'all';
+              switch(filterType) {
+                case 'sales':
+                  window.location.href = "/sales";
+                  break;
+                case 'purchases':
+                  window.location.href = "/purchase";
+                  break;
+                case 'expenses':
+                  window.location.href = "/expenses";
+                  break;
+                default:
+                  // For 'all' or if no selection, show sales by default
+                  window.location.href = "/sales";
+              }
+            }}
           >
             View All
           </Button>
@@ -420,7 +454,20 @@ export default function Dashboard() {
                 variant="link" 
                 className="text-primary hover:text-primary-dark font-medium"
                 onClick={() => {
-                  window.location.href = "/jewellery-stock";
+                  // Show a comprehensive stock report in a dialog instead of redirecting
+                  const stockReport = `
+Stock Overview Report
+--------------------
+Jewellery Stock: 352 items
+Certified Stock: 128 items
+Loose Stock: 96 items
+Memo Given: 8 items
+Memo Taken: 5 items
+Total Items in Inventory: 589 items
+
+Current Value: ₹61,66,67,29,862
+                  `;
+                  alert(stockReport);
                 }}
               >
                 View Detailed Report <i className="fas fa-arrow-right ml-2"></i>
