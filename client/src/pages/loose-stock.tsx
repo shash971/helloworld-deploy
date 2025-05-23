@@ -264,26 +264,38 @@ export default function LooseStock() {
   
   // Handle form submission
   const handleFormSubmit = (data: any) => {
+    // Ensure numeric values are properly parsed
+    const processedData = {
+      ...data,
+      // Convert string values to numbers for any numeric fields
+      carat: typeof data.carat === 'string' ? parseFloat(data.carat) : data.carat,
+      quantity: typeof data.quantity === 'string' ? parseInt(data.quantity, 10) : data.quantity,
+      costPrice: typeof data.costPrice === 'string' ? parseFloat(data.costPrice) : data.costPrice,
+      sellingPrice: typeof data.sellingPrice === 'string' ? parseFloat(data.sellingPrice) : data.sellingPrice,
+      // Add last updated timestamp
+      lastUpdated: new Date().toISOString()
+    };
+    
     if (editItem) {
       // Update existing item
       setStockData(stockData.map(item => 
-        item.id === editItem.id ? { ...item, ...data } : item
+        item.id === editItem.id ? { ...item, ...processedData } : item
       ));
       toast({
         title: "Item Updated",
-        description: `Item ${data.itemCode} has been updated.`,
+        description: `Item ${processedData.itemCode} has been updated.`,
         variant: "default",
       });
     } else {
       // Add new item
       const newItem = {
         id: stockData.length + 1,
-        ...data,
+        ...processedData,
       };
       setStockData([...stockData, newItem]);
       toast({
         title: "Item Added",
-        description: `Item ${data.itemCode} has been added to stock.`,
+        description: `Item ${processedData.itemCode} has been added to stock.`,
         variant: "default",
       });
     }
