@@ -382,6 +382,17 @@ export default function Dashboard() {
             </Button>
           )}
         />
+        
+        {/* Add View All Button at the bottom */}
+        <div className="p-4 flex justify-end border-t border-neutral-200">
+          <Button 
+            variant="default" 
+            className="bg-primary hover:bg-primary-dark text-white"
+            onClick={() => window.location.href = "/sales"}
+          >
+            View All
+          </Button>
+        </div>
       </Card>
       
       {/* Bottom Row Grid */}
