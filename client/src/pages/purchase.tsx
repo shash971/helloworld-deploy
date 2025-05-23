@@ -445,21 +445,25 @@ export default function Purchase() {
         // Add to frontend data only (demo mode)
         const newPurchase = {
           id: purchasesData.length + 1,
-          poNumber: purchaseData.lab_no ? `PO-${purchaseData.lab_no}` : values.poNumber,
-          date: new Date(purchaseData.date),
-          vendorName: purchaseData.vendor,
-          totalAmount: purchaseData.total,
-          paymentStatus: purchaseData.pay_mode,
-          items: purchaseData.iteam || "Diamond Jewelry"
+          poNumber: values.poNumber,
+          date: new Date(values.date),
+          vendorName: values.vendorName,
+          totalAmount: parseFloat(values.totalAmount),
+          paymentStatus: values.paymentStatus,
+          items: "Diamond Jewelry"
         };
         
-        setPurchasesData(prev => [...prev, newPurchase]);
-        return newPurchase;
+        // Update the state with the new purchase
+        setPurchasesData(prevData => [...prevData, newPurchase]);
+        
+        // Return success object similar to what the API would return
+        return { success: true, purchase: newPurchase };
       }
       
       const result = await response.json();
       console.log("Purchase created successfully:", result);
       
+      // If we have a successful response or created a local item
       toast({
         title: "Success",
         description: "Purchase created successfully",
@@ -479,8 +483,9 @@ export default function Purchase() {
       // Close the dialog
       setOpenDialog(false);
       
-      // Refresh purchases data
-      fetchPurchases();
+      // No need to refresh - already updated the state with the new purchase
+      // Just trigger a re-render to show the new data in the UI
+      setPurchasesData([...purchasesData]);
       
     } catch (error) {
       console.error("Purchase creation error:", error);
