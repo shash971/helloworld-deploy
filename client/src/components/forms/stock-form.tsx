@@ -34,90 +34,80 @@ type StockFormProps = {
 };
 
 // Custom schema extensions
+// More flexible schema that accepts both string and number inputs
 const looseStockFormSchema = insertLooseStockSchema.extend({
-  carat: z.union([
-    z.string().min(1, "Carat weight is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Carat must be a positive number" }
-    ),
-    z.number().positive("Carat must be a positive number")
-  ]),
-  quantity: z.union([
-    z.string().min(1, "Quantity is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) >= 1 && Number.isInteger(Number(val)),
-      { message: "Quantity must be a positive integer" }
-    ),
-    z.number().int().positive("Quantity must be a positive integer")
-  ]),
-  costPrice: z.union([
-    z.string().min(1, "Cost price is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Cost price must be a positive number" }
-    ),
-    z.number().positive("Cost price must be a positive number")
-  ]),
-  sellingPrice: z.union([
-    z.string().min(1, "Selling price is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Selling price must be a positive number" }
-    ),
-    z.number().positive("Selling price must be a positive number")
-  ]),
+  // For carat weight: accept string or number and validate
+  carat: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Carat must be a positive number").or(z.string().min(1, "Carat weight is required"))
+  ),
+  
+  // For quantity: accept string or number and validate
+  quantity: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseInt(val, 10) : val,
+    z.number().int().positive("Quantity must be a positive integer").or(z.string().min(1, "Quantity is required"))
+  ),
+  
+  // For cost price: accept string or number and validate
+  costPrice: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Cost price must be a positive number").or(z.string().min(1, "Cost price is required"))
+  ),
+  
+  // For selling price: accept string or number and validate
+  sellingPrice: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Selling price must be a positive number").or(z.string().min(1, "Selling price is required"))
+  ),
 });
 
+// More flexible schema for certified stock that accepts both string and number inputs
 const certifiedStockFormSchema = insertCertifiedStockSchema.extend({
-  carat: z.union([
-    z.string().min(1, "Carat weight is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Carat must be a positive number" }
-    ),
-    z.number().positive("Carat must be a positive number")
-  ]),
-  costPrice: z.union([
-    z.string().min(1, "Cost price is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Cost price must be a positive number" }
-    ),
-    z.number().positive("Cost price must be a positive number")
-  ]),
-  sellingPrice: z.union([
-    z.string().min(1, "Selling price is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Selling price must be a positive number" }
-    ),
-    z.number().positive("Selling price must be a positive number")
-  ]),
+  // For carat weight: accept string or number and validate
+  carat: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Carat must be a positive number").or(z.string().min(1, "Carat weight is required"))
+  ),
+  
+  // For cost price: accept string or number and validate
+  costPrice: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Cost price must be a positive number").or(z.string().min(1, "Cost price is required"))
+  ),
+  
+  // For selling price: accept string or number and validate
+  sellingPrice: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Selling price must be a positive number").or(z.string().min(1, "Selling price is required"))
+  ),
 });
 
+// More flexible schema for jewellery stock that handles both string and number inputs
 const jewelleryStockFormSchema = insertJewelleryStockSchema.extend({
-  metalWeight: z.union([
-    z.string().min(1, "Metal weight is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Metal weight must be a positive number" }
-    ),
-    z.number().positive("Metal weight must be a positive number")
-  ]),
-  grossWeight: z.union([
-    z.string().min(1, "Gross weight is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Gross weight must be a positive number" }
-    ),
-    z.number().positive("Gross weight must be a positive number")
-  ]),
-  costPrice: z.union([
-    z.string().min(1, "Cost price is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Cost price must be a positive number" }
-    ),
-    z.number().positive("Cost price must be a positive number")
-  ]),
-  sellingPrice: z.union([
-    z.string().min(1, "Selling price is required").refine(
-      (val) => !isNaN(Number(val)) && Number(val) > 0,
-      { message: "Selling price must be a positive number" }
-    ),
-    z.number().positive("Selling price must be a positive number")
-  ]),
+  // For metal weight: accept string or number and validate
+  metalWeight: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Metal weight must be a positive number").or(z.string().min(1, "Metal weight is required"))
+  ),
+  
+  // For gross weight: accept string or number and validate
+  grossWeight: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Gross weight must be a positive number").or(z.string().min(1, "Gross weight is required"))
+  ),
+  
+  // For cost price: accept string or number and validate
+  costPrice: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Cost price must be a positive number").or(z.string().min(1, "Cost price is required"))
+  ),
+  
+  // For selling price: accept string or number and validate
+  sellingPrice: z.preprocess(
+    (val) => (typeof val === 'string' && val !== '') ? parseFloat(val) : val,
+    z.number().positive("Selling price must be a positive number").or(z.string().min(1, "Selling price is required"))
+  ),
+  
   stoneDetails: z.string().optional(),
 });
 
