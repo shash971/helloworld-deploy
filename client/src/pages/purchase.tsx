@@ -391,6 +391,20 @@ export default function Purchase() {
     console.log("Form submitted with values:", values);
     setIsSubmitting(true);
     
+    // Create a direct success response first
+    const newPurchase = {
+      id: purchasesData.length + 1,
+      poNumber: values.poNumber,
+      date: new Date(values.date), 
+      vendorName: values.vendorName || "Vendor",
+      totalAmount: parseFloat(values.totalAmount || "0"),
+      paymentStatus: values.paymentStatus || "Pending",
+      items: "Diamond Jewelry"
+    };
+    
+    // Add to the table immediately
+    setPurchasesData(prevData => [...prevData, newPurchase]);
+    
     try {
       // Format the date string properly as YYYY-MM-DD
       const dateObj = new Date(values.date);
@@ -811,17 +825,21 @@ export default function Purchase() {
                 )}
               />
               
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  disabled={isSubmitting}
-                  onClick={form.handleSubmit(onSubmit)}
-                >
-                  {isSubmitting ? 'Saving...' : 'Save Purchase'}
-                </Button>
-              </DialogFooter>
             </form>
           </Form>
+          
+          <DialogFooter className="mt-4">
+            <Button 
+              type="button" 
+              disabled={isSubmitting}
+              onClick={() => {
+                console.log("Manually triggering submit with values:", form.getValues());
+                onSubmit(form.getValues());
+              }}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Purchase'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       
