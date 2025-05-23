@@ -1,205 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatusBadge } from "@/components/dashboard/status-badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { insertSaleSchema } from "@shared/schema";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { API_BASE_URL, getAuthHeader, isAuthenticated } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-
-const formSchema = insertSaleSchema.extend({
-  date: z.string().min(1, "Date is required"),
-  totalAmount: z.string().min(1, "Amount is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Amount must be a positive number" }
-  ),
-  customerName: z.string().min(1, "Customer name is required"),
-});
+import { SalesForm } from "@/components/sales/SalesForm";
+import { SalesList } from "@/components/sales/SalesList";
 
 export default function Sales() {
   const [openDialog, setOpenDialog] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
-  // Define interface for API response
-  interface SalesApiResponse {
-    sales_data?: any[];
-    total_sales?: number;
-    pending_payments?: number;
-    total_transactions?: number;
-  }
+  // Function to handle successful sale creation
+  const handleSaleSuccess = () => {
+    setOpenDialog(false);
+    toast({
+      title: "Success",
+      description: "Sale created successfully",
+      variant: "default",
+    });
+  };
   
-  // Fetch sales data directly from the backend
-  const { data: salesApiData, isLoading, error, refetch: refetchSales } = useQuery({
-    queryKey: ['/sales/'],
-    enabled: isAuthenticated(),
-    retry: 2,
-  });
-  
-  // Use API data if available, otherwise use sample data
-  const [salesData, setSalesData] = useState<any[]>([
-    {
-      id: 1,
-      invoiceNumber: "SL-10249",
-      date: new Date("2023-07-12"),
-      customerName: "Rahul Mehta",
-      totalAmount: 125000,
-      paymentStatus: "Completed",
-      items: "Diamond Ring (1.2ct), Gold Chain",
-    },
-    {
-      id: 2,
-      invoiceNumber: "SL-10248",
-      date: new Date("2023-07-10"),
-      customerName: "Anjali Shah",
-      totalAmount: 87500,
-      paymentStatus: "Completed",
-      items: "Emerald Earrings, Silver Bracelet",
-    },
-    {
-      id: 3,
-      invoiceNumber: "SL-10247",
-      date: new Date("2023-07-08"),
-      customerName: "Mohan Patel",
-      totalAmount: 156000,
-      paymentStatus: "Completed",
-      items: "Diamond Necklace (2.5ct)",
-    },
-    {
-      id: 4,
-      invoiceNumber: "SL-10246",
-      date: new Date("2023-07-05"),
-      customerName: "Ravi Kumar",
-      totalAmount: 45000,
-      paymentStatus: "Pending",
-      items: "Gold Earrings, Silver Anklet",
-    },
-    {
-      id: 5,
-      invoiceNumber: "SL-10245",
-      date: new Date("2023-07-03"),
-      customerName: "Priya Desai",
-      totalAmount: 210000,
-      paymentStatus: "Completed",
-      items: "Platinum Ring with Diamonds",
-    },
-    {
-      id: 6,
-      invoiceNumber: "SL-10244",
-      date: new Date("2023-07-01"),
-      customerName: "Suresh Jain",
-      totalAmount: 95000,
-      paymentStatus: "Completed",
-      items: "Gold Bangle Set",
-    },
-  ]);
-  
-  // Process API data when it arrives
-  useEffect(() => {
-    console.log("Sales API data received:", salesApiData);
-    if (salesApiData) {
-      try {
-        // Check if salesApiData is an array (GET /sales endpoint returns an array)
-        const salesArray = Array.isArray(salesApiData) ? salesApiData : [];
-        
-        if (salesArray.length > 0) {
-          // Transform API data to match our frontend structure
-          const transformedData = salesArray.map((sale: any, index: number) => ({
-            id: sale.id || index + 1,
-            invoiceNumber: `SL-${70000 + sale.id}`,
-            date: new Date(sale.date),
-            customerName: sale.customer || 'Customer',
-            totalAmount: parseFloat(sale.total?.toString() || '0'),
-            paymentStatus: sale.pay_mode || 'Pending',
-            items: sale.iteam || 'Jewelry Item',
-          }));
-          
-          console.log("Transformed sales data:", transformedData);
-          setSalesData(transformedData);
-        } else {
-          console.log("No sales data found in API response, keeping current data");
-        }
-      } catch (error) {
-        console.error('Error processing sales data:', error);
-      }
-    }
-  }, [salesApiData]);
-  
-  const columns = [
-    {
-      header: "Invoice Number",
-      accessor: (row: typeof salesData[0]) => (
-        <span className="font-medium text-primary">{row.invoiceNumber}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "Date",
-      accessor: (row: typeof salesData[0]) => formatDate(row.date),
-      sortable: true,
-    },
-    {
-      header: "Customer",
-      accessor: "customerName",
-      sortable: true,
-    },
-    {
-      header: "Items",
-      accessor: "items",
-    },
-    {
-      header: "Amount",
-      accessor: (row: typeof salesData[0]) => (
-        <span className="font-medium">{formatCurrency(row.totalAmount)}</span>
-      ),
-      sortable: true,
-    },
-    {
-      header: "Status",
-      accessor: (row: typeof salesData[0]) => (
-        <StatusBadge type="status" value={row.paymentStatus} />
-      ),
-    },
-  ];
-  
-  // Form setup
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      invoiceNumber: `SL-${Math.floor(70000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().split("T")[0],
-      customerName: "",
-      totalAmount: "",
-      paymentStatus: "Pending",
-      notes: "",
-    },
-  });
+
   
   // Mutation for creating a new sale with direct form data approach
   const createSaleMutation = useMutation({
