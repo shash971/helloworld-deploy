@@ -359,7 +359,22 @@ export default function Dashboard() {
           keyField="id"
           isLoading={isLoading}
           actionComponent={(row) => (
-            <Button variant="link" className="text-primary hover:text-primary-dark">
+            <Button 
+              variant="link" 
+              className="text-primary hover:text-primary-dark"
+              onClick={() => {
+                // Show transaction details when View is clicked
+                const transactionDetails = `
+                  Transaction ID: ${row.transactionId}
+                  Date: ${formatDate(row.date)}
+                  Type: ${row.type}
+                  Customer/Vendor: ${row.customerVendor}
+                  Amount: ${formatCurrency(row.amount)}
+                  Status: ${row.status}
+                `;
+                alert(transactionDetails);
+              }}
+            >
               View
             </Button>
           )}
