@@ -262,45 +262,63 @@ export default function LooseStock() {
     });
   };
   
-  // Handle form submission
+  // Handle form submission with improved data handling
   const handleFormSubmit = (data: any) => {
-    // Ensure numeric values are properly parsed
-    const processedData = {
-      ...data,
-      // Convert string values to numbers for any numeric fields
-      carat: typeof data.carat === 'string' ? parseFloat(data.carat) : data.carat,
-      quantity: typeof data.quantity === 'string' ? parseInt(data.quantity, 10) : data.quantity,
-      costPrice: typeof data.costPrice === 'string' ? parseFloat(data.costPrice) : data.costPrice,
-      sellingPrice: typeof data.sellingPrice === 'string' ? parseFloat(data.sellingPrice) : data.sellingPrice,
-      // Add last updated timestamp
-      lastUpdated: new Date().toISOString()
-    };
+    console.log("Received form data:", data);
     
-    if (editItem) {
-      // Update existing item
-      setStockData(stockData.map(item => 
-        item.id === editItem.id ? { ...item, ...processedData } : item
-      ));
-      toast({
-        title: "Item Updated",
-        description: `Item ${processedData.itemCode} has been updated.`,
-        variant: "default",
-      });
-    } else {
-      // Add new item
-      const newItem = {
-        id: stockData.length + 1,
-        ...processedData,
+    try {
+      // Create a clean object with all needed fields
+      const processedData = {
+        id: editItem ? editItem.id : stockData.length + 1,
+        itemCode: data.itemCode || `LS-${Math.floor(10000 + Math.random() * 90000)}`,
+        stoneType: data.stoneType || "Diamond",
+        shape: data.shape || "",
+        carat: parseFloat(data.carat) || 0,
+        color: data.color || "",
+        clarity: data.clarity || "",
+        cut: data.cut || "",
+        quantity: parseInt(data.quantity, 10) || 1,
+        costPrice: parseFloat(data.costPrice) || 0,
+        sellingPrice: parseFloat(data.sellingPrice) || 0,
+        location: data.location || "Main Store",
+        notes: data.notes || "",
+        updatedBy: 1, // Current user
+        lastUpdated: new Date().toISOString()
       };
-      setStockData([...stockData, newItem]);
+      
+      console.log("Processed data:", processedData);
+      
+      if (editItem) {
+        // Update existing item
+        setStockData(stockData.map(item => 
+          item.id === editItem.id ? processedData : item
+        ));
+        toast({
+          title: "Item Updated",
+          description: `Item ${processedData.itemCode} has been successfully updated.`,
+          variant: "default",
+        });
+      } else {
+        // Add new item
+        setStockData([...stockData, processedData]);
+        toast({
+          title: "Item Added",
+          description: `Item ${processedData.itemCode} has been successfully added to stock.`,
+          variant: "default",
+        });
+      }
+      
+      // Close dialog and reset
+      setOpenDialog(false);
+      setEditItem(null);
+    } catch (error) {
+      console.error("Error processing form data:", error);
       toast({
-        title: "Item Added",
-        description: `Item ${processedData.itemCode} has been added to stock.`,
-        variant: "default",
+        title: "Error",
+        description: "There was a problem saving the item. Please try again.",
+        variant: "destructive",
       });
     }
-    setOpenDialog(false);
-    setEditItem(null);
   };
   
   // Handle form cancel

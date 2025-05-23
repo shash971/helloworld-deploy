@@ -195,10 +195,8 @@ export function StockForm({ type, defaultValues, onSubmit, onCancel }: StockForm
     return `${prefix}${Math.floor(10000 + Math.random() * 90000)}`;
   }
 
-  // Handle form submission with direct callback to parent
-  const handleFormSubmit = (values: any) => {
-    console.log("Form submitted with values:", values);
-    
+  // Process the form data before submitting
+  const processFormValues = (values: any) => {
     // Process form values
     const processedValues = { ...values };
     
@@ -229,13 +227,21 @@ export function StockForm({ type, defaultValues, onSubmit, onCancel }: StockForm
       }
     }
     
-    onSubmit(processedValues);
+    return processedValues;
   };
 
   // Render the appropriate form fields based on stock type
+  // Function to handle form submission
+  const handleFormSubmission = (data: any) => {
+    // Process the data 
+    const processedData = processFormValues(data);
+    // Send to parent component
+    onSubmit(processedData);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmission)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
