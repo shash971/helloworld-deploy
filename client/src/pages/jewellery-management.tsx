@@ -278,7 +278,7 @@ export default function JewelleryManagement() {
     },
     {
       header: "Location",
-      accessor: "location",
+      accessor: (row: typeof jewelleryData[0]) => row.location,
     },
   ];
   
@@ -413,6 +413,18 @@ export default function JewelleryManagement() {
     setOpenDialog(false);
   }
   
+  // Handle delete item
+  const handleDeleteItem = (item: any) => {
+    if (confirm(`Are you sure you want to delete ${item.name}?`)) {
+      setJewelleryData(jewelleryData.filter(i => i.id !== item.id));
+      toast({
+        title: "Item Deleted",
+        description: `${item.name} has been deleted from the inventory.`,
+        variant: "default",
+      });
+    }
+  };
+  
   return (
     <MainLayout title="Jewellery Management">
       <div className="flex justify-between items-center mb-6">
@@ -484,10 +496,13 @@ export default function JewelleryManagement() {
             actionComponent={(row) => (
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm" onClick={() => handleViewItem(row)}>
-                  <i className="fas fa-eye mr-1"></i> View
+                  View
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleEditItem(row)}>
-                  <i className="fas fa-pen mr-1"></i> Edit
+                  Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDeleteItem(row)}>
+                  Delete
                 </Button>
               </div>
             )}
