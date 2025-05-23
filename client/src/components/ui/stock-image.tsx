@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface StockImageProps {
-  type: "jewelry-store" | "jewelry-counter" | "gemstone-collection" | "certified-stone";
+  type: "jewelry-store" | "jewelry-counter" | "gemstone-collection" | "certified-stone" | "jewelry-pieces";
   className?: string;
 }
 
@@ -26,6 +26,11 @@ export function StockImage({ type, className }: StockImageProps) {
       "https://images.unsplash.com/photo-1615655060948-2a1920435916?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1579042904065-099a6505b3a5?auto=format&fit=crop&w=800&q=80"
+    ],
+    "jewelry-pieces": [
+      "https://images.unsplash.com/photo-1539874754764-5a96559165b0?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1543294001-f7cd5d7fb516?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1582119749974-a008adf7fc56?auto=format&fit=crop&w=800&q=80"
     ]
   };
 
