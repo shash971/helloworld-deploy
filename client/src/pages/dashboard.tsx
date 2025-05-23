@@ -349,7 +349,10 @@ export default function Dashboard() {
                   <SelectItem value="expenses">Expenses</SelectItem>
                 </SelectContent>
               </Select>
-              <Button>View All</Button>
+              <Button onClick={() => {
+                // Navigate to sales page for now since we don't have a dedicated transactions page
+                window.location.href = "/sales";
+              }}>View All</Button>
             </div>
           </div>
         </div>
@@ -402,7 +405,13 @@ export default function Dashboard() {
             </div>
             
             <div className="mt-6 flex justify-end">
-              <Button variant="link" className="text-primary hover:text-primary-dark font-medium">
+              <Button 
+                variant="link" 
+                className="text-primary hover:text-primary-dark font-medium"
+                onClick={() => {
+                  window.location.href = "/jewellery-stock";
+                }}
+              >
                 View Detailed Report <i className="fas fa-arrow-right ml-2"></i>
               </Button>
             </div>
@@ -414,7 +423,11 @@ export default function Dashboard() {
           <div className="p-6 border-b border-neutral-200">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-neutral-800">Upcoming Tasks</h3>
-              <Button variant="link" className="text-primary hover:text-primary-dark font-medium">
+              <Button 
+                variant="link" 
+                className="text-primary hover:text-primary-dark font-medium"
+                onClick={() => window.location.href = "/tasks"}
+              >
                 View All
               </Button>
             </div>
