@@ -3,6 +3,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { registerUserInBackend } from "@/lib/userService";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -413,25 +414,41 @@ export default function UserManagement() {
       createdBy: "admin", // Assume current user is admin
     };
     
-    // Add user to state
-    setUsers([...users, newUserObj]);
-    
-    // Reset form and close dialog
-    setNewUser({
-      username: "",
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      role: "sales",
-    });
-    setAddUserDialog(false);
-    
-    toast({
-      title: "User Created",
-      description: `User ${newUserObj.username} has been created successfully.`,
-      variant: "default",
-    });
+    // Register user in backend authentication system
+    registerUserInBackend(newUser.username, newUser.password, newUser.role)
+      .then(success => {
+        if (success) {
+          // Add user to state
+          setUsers([...users, newUserObj]);
+          
+          // Reset form and close dialog
+          setNewUser({
+            username: "",
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+            role: "sales",
+          });
+          setAddUserDialog(false);
+          
+          toast({
+            title: "User Created",
+            description: `User ${newUserObj.username} has been created successfully. They can now log into the system.`,
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Backend Registration Failed",
+            description: "The user was created in the management system but couldn't be registered for login. Please try again.",
+            variant: "destructive",
+          });
+          
+          // Still add to local management system
+          setUsers([...users, newUserObj]);
+          setAddUserDialog(false);
+        }
+      });
   };
   
   // Handle user status toggle

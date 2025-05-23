@@ -21,6 +21,7 @@ import Reports from "@/pages/reports";
 import TasksPage from "@/pages/tasks";
 import RoleLogin from "@/pages/role-login";
 import UserManagement from "@/pages/user-management";
+import UserProfile from "@/pages/user-profile";
 
 // Protected route component that redirects to login if not authenticated
 const ProtectedRoute = ({ component: Component, ...rest }: { component: React.ComponentType<any>, path?: string }) => {
@@ -88,6 +89,9 @@ function Router() {
       </Route>
       <Route path="/user-management">
         {() => <ProtectedRoute component={UserManagement} />}
+      </Route>
+      <Route path="/user-profile">
+        {() => <ProtectedRoute component={UserProfile} />}
       </Route>
       <Route path="/tasks">
         {() => <ProtectedRoute component={TasksPage} />}
