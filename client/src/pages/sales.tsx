@@ -251,9 +251,35 @@ export default function Sales() {
           <h1 className="text-2xl font-semibold text-neutral-800">Sales Management</h1>
           <p className="text-neutral-500">Manage all sales transactions</p>
         </div>
-        <Button onClick={() => setOpenDialog(true)}>
-          <i className="fas fa-plus mr-2"></i> New Sale
-        </Button>
+        <div className="flex space-x-2">
+          <label htmlFor="import-csv" className="cursor-pointer">
+            <div className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
+              <i className="fas fa-file-import mr-2"></i> Import
+            </div>
+            <input
+              id="import-csv"
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  toast({
+                    title: "File Selected",
+                    description: `Selected file: ${file.name}. Import feature will be implemented soon.`,
+                    variant: "default",
+                  });
+                  
+                  // Reset the input so the same file can be selected again
+                  e.target.value = '';
+                }
+              }}
+            />
+          </label>
+          <Button onClick={() => setOpenDialog(true)}>
+            <i className="fas fa-plus mr-2"></i> New Sale
+          </Button>
+        </div>
       </div>
       
       {/* Sales Summary Cards */}
@@ -329,10 +355,90 @@ export default function Sales() {
               keyField="id"
               actionComponent={(row) => (
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const salesDetails = `
+                        Invoice: ${row.invoiceNumber}
+                        Date: ${formatDate(row.date)}
+                        Customer: ${row.customerName}
+                        Item: ${row.items}
+                        Amount: ${formatCurrency(row.totalAmount)}
+                        Status: ${row.paymentStatus}
+                      `;
+                      alert(salesDetails);
+                    }}
+                  >
                     <i className="fas fa-eye mr-1"></i> View
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const printWindow = window.open('', '_blank');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Print Sales Receipt - ${row.invoiceNumber}</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+                                .header { text-align: center; margin-bottom: 20px; }
+                                .invoice-info { display: flex; justify-content: space-between; }
+                                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #f2f2f2; }
+                                .footer { margin-top: 30px; text-align: center; }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="header">
+                                <h1>Sales Receipt</h1>
+                              </div>
+                              <div class="invoice-info">
+                                <div>
+                                  <p><strong>Invoice Number:</strong> ${row.invoiceNumber}</p>
+                                  <p><strong>Date:</strong> ${formatDate(row.date)}</p>
+                                </div>
+                                <div>
+                                  <p><strong>Customer:</strong> ${row.customerName}</p>
+                                  <p><strong>Status:</strong> ${row.paymentStatus}</p>
+                                </div>
+                              </div>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Item</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td>${row.items}</td>
+                                    <td>Premium Jewelry Item</td>
+                                    <td>${formatCurrency(row.totalAmount)}</td>
+                                  </tr>
+                                </tbody>
+                                <tfoot>
+                                  <tr>
+                                    <td colspan="2" style="text-align: right;"><strong>Total:</strong></td>
+                                    <td><strong>${formatCurrency(row.totalAmount)}</strong></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                              <div class="footer">
+                                <p>Thank you for your business!</p>
+                              </div>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
+                      }
+                    }}
+                  >
                     <i className="fas fa-print mr-1"></i> Print
                   </Button>
                 </div>
