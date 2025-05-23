@@ -35,56 +35,89 @@ type StockFormProps = {
 
 // Custom schema extensions
 const looseStockFormSchema = insertLooseStockSchema.extend({
-  carat: z.string().min(1, "Carat weight is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Carat must be a positive number" }
-  ),
-  quantity: z.string().min(1, "Quantity is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) >= 1 && Number.isInteger(Number(val)),
-    { message: "Quantity must be a positive integer" }
-  ),
-  costPrice: z.string().min(1, "Cost price is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Cost price must be a positive number" }
-  ),
-  sellingPrice: z.string().min(1, "Selling price is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Selling price must be a positive number" }
-  ),
+  carat: z.union([
+    z.string().min(1, "Carat weight is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Carat must be a positive number" }
+    ),
+    z.number().positive("Carat must be a positive number")
+  ]),
+  quantity: z.union([
+    z.string().min(1, "Quantity is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) >= 1 && Number.isInteger(Number(val)),
+      { message: "Quantity must be a positive integer" }
+    ),
+    z.number().int().positive("Quantity must be a positive integer")
+  ]),
+  costPrice: z.union([
+    z.string().min(1, "Cost price is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Cost price must be a positive number" }
+    ),
+    z.number().positive("Cost price must be a positive number")
+  ]),
+  sellingPrice: z.union([
+    z.string().min(1, "Selling price is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Selling price must be a positive number" }
+    ),
+    z.number().positive("Selling price must be a positive number")
+  ]),
 });
 
 const certifiedStockFormSchema = insertCertifiedStockSchema.extend({
-  carat: z.string().min(1, "Carat weight is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Carat must be a positive number" }
-  ),
-  costPrice: z.string().min(1, "Cost price is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Cost price must be a positive number" }
-  ),
-  sellingPrice: z.string().min(1, "Selling price is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Selling price must be a positive number" }
-  ),
+  carat: z.union([
+    z.string().min(1, "Carat weight is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Carat must be a positive number" }
+    ),
+    z.number().positive("Carat must be a positive number")
+  ]),
+  costPrice: z.union([
+    z.string().min(1, "Cost price is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Cost price must be a positive number" }
+    ),
+    z.number().positive("Cost price must be a positive number")
+  ]),
+  sellingPrice: z.union([
+    z.string().min(1, "Selling price is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Selling price must be a positive number" }
+    ),
+    z.number().positive("Selling price must be a positive number")
+  ]),
 });
 
 const jewelleryStockFormSchema = insertJewelleryStockSchema.extend({
-  metalWeight: z.string().min(1, "Metal weight is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Metal weight must be a positive number" }
-  ),
-  grossWeight: z.string().min(1, "Gross weight is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Gross weight must be a positive number" }
-  ),
-  costPrice: z.string().min(1, "Cost price is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Cost price must be a positive number" }
-  ),
-  sellingPrice: z.string().min(1, "Selling price is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    { message: "Selling price must be a positive number" }
-  ),
+  metalWeight: z.union([
+    z.string().min(1, "Metal weight is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Metal weight must be a positive number" }
+    ),
+    z.number().positive("Metal weight must be a positive number")
+  ]),
+  grossWeight: z.union([
+    z.string().min(1, "Gross weight is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Gross weight must be a positive number" }
+    ),
+    z.number().positive("Gross weight must be a positive number")
+  ]),
+  costPrice: z.union([
+    z.string().min(1, "Cost price is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Cost price must be a positive number" }
+    ),
+    z.number().positive("Cost price must be a positive number")
+  ]),
+  sellingPrice: z.union([
+    z.string().min(1, "Selling price is required").refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      { message: "Selling price must be a positive number" }
+    ),
+    z.number().positive("Selling price must be a positive number")
+  ]),
   stoneDetails: z.string().optional(),
 });
 
