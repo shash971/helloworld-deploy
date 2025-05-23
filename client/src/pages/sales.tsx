@@ -55,11 +55,11 @@ export default function Sales() {
     total_transactions?: number;
   }
   
-  // Fetch sales data directly
-  const { data: salesApiData, isLoading, error } = useQuery<any[]>({
+  // Fetch sales data directly from the backend
+  const { data: salesApiData, isLoading, error, refetch: refetchSales } = useQuery({
     queryKey: ['/sales/'],
     enabled: isAuthenticated(),
-    retry: 1,
+    retry: 2,
   });
   
   // Use API data if available, otherwise use sample data
@@ -136,14 +136,14 @@ export default function Sales() {
             date: new Date(sale.date),
             customerName: sale.customer || 'Customer',
             totalAmount: parseFloat(sale.total?.toString() || '0'),
-            paymentStatus: sale.pay_mode === 'Full Payment' ? 'Completed' : 'Pending',
+            paymentStatus: sale.pay_mode || 'Pending',
             items: sale.iteam || 'Jewelry Item',
           }));
           
           console.log("Transformed sales data:", transformedData);
           setSalesData(transformedData);
         } else {
-          console.log("No sales data found in API response, using sample data");
+          console.log("No sales data found in API response, keeping current data");
         }
       } catch (error) {
         console.error('Error processing sales data:', error);
@@ -300,27 +300,36 @@ export default function Sales() {
       
       console.log("Formatted sale data for backend:", saleData);
       
-      // Submit to backend API with direct fetch to ensure proper data format
-      // Instead of using the mutation, let's make a direct fetch request
-      console.log("About to send this data to the server:", JSON.stringify(saleData));
-      
-      const response = await fetch(`${API_BASE_URL}/sales/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeader()
-        },
-        body: JSON.stringify(saleData)
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to save sale:', errorText);
-        throw new Error(`Failed to save sale: ${response.status} - ${errorText}`);
+      try {
+        // Submit to backend API with direct fetch to ensure proper data format
+        console.log("About to send this data to the server:", JSON.stringify(saleData));
+        
+        const response = await fetch(`${API_BASE_URL}/sales/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader()
+          },
+          body: JSON.stringify(saleData)
+        });
+        
+        console.log("Response status:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to save sale:', errorText);
+          throw new Error(`Failed to save sale: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log("Sale successfully created:", result);
+        
+        // After successful creation, refresh the sales data
+        await refetchSales();
+      } catch (fetchError) {
+        console.error("Error during fetch operation:", fetchError);
+        throw fetchError;
       }
-      
-      const result = await response.json();
-      console.log("Sale successfully created:", result);
       
       // Show success message immediately for better user feedback
       toast({
