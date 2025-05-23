@@ -19,11 +19,14 @@ export interface UserInfo {
 // Function to perform login and get token
 export async function login(username: string, password: string): Promise<AuthResponse | null> {
   try {
-    console.log(`Attempting login with username: ${username}`);
+    // Extract username from email if needed (backend expects simple username)
+    const cleanUsername = username.includes('@') ? username.split('@')[0] : username;
+    
+    console.log(`Attempting login with username: ${cleanUsername}`);
     
     // Create form data exactly as FastAPI expects it
     const formData = new URLSearchParams();
-    formData.append('username', username);
+    formData.append('username', cleanUsername);
     formData.append('password', password);
     
     // Make direct fetch request to avoid any middleware issues

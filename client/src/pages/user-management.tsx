@@ -402,6 +402,12 @@ export default function UserManagement() {
       return;
     }
     
+    // IMPORTANT: Use only username, not email, for the backend auth system
+    // The backend auth system uses username field only
+    const usernameForAuth = newUser.username.includes('@') 
+      ? newUser.username.split('@')[0] // Extract username part from email
+      : newUser.username; // Use as is if not an email
+    
     // Create new user object
     const newUserObj: User = {
       id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
@@ -415,7 +421,8 @@ export default function UserManagement() {
     };
     
     // Register user in backend authentication system
-    registerUserInBackend(newUser.username, newUser.password, newUser.role)
+    // Use simplified username for backend authentication
+    registerUserInBackend(usernameForAuth, newUser.password, newUser.role)
       .then(success => {
         if (success) {
           // Add user to state
@@ -434,7 +441,7 @@ export default function UserManagement() {
           
           toast({
             title: "User Created",
-            description: `User ${newUserObj.username} has been created successfully. They can now log into the system.`,
+            description: `User ${newUserObj.username} has been created successfully. They can now log in using the username "${usernameForAuth}" and their password.`,
             variant: "default",
           });
         } else {
