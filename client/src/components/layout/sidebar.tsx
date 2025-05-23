@@ -70,6 +70,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const hasAccessTo = (href: string): boolean => {
     const path = href.replace("/", "");
     
+    // Everyone can access the dashboard and profile
+    if (path === "" || path === "dashboard" || path === "user-profile") {
+      return true;
+    }
+    
+    // Special enforcement for admin-only pages
+    if (path === "user-management" && userRole !== "admin" && userRole !== "manager") {
+      console.log("Security: Access denied to user management for non-admin/manager role");
+      return false;
+    }
+    
     // Admin can access everything
     if (userRole === "admin" || rolePermissions.admin.canAccessAll) {
       return true;
@@ -79,7 +90,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const role = userRole as keyof typeof rolePermissions;
     if (rolePermissions[role]) {
       if ('canAccess' in rolePermissions[role]) {
-        return (rolePermissions[role] as any).canAccess.includes(path);
+        const hasPermission = (rolePermissions[role] as any).canAccess.includes(path);
+        
+        // Log access attempts for security auditing
+        if (!hasPermission) {
+          console.log(`Security: Access denied for ${userRole} trying to access ${path}`);
+        }
+        
+        return hasPermission;
       }
       if ('canAccessAll' in rolePermissions[role] && (rolePermissions[role] as any).canAccessAll) {
         return true;
@@ -87,6 +105,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
     
     // Default: no access
+    console.log(`Security: No permission defined for ${userRole} to access ${path}`);
     return false;
   };
   
