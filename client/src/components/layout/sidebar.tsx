@@ -39,7 +39,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     {
       title: "Dashboard",
       icon: <i className="fas fa-tachometer-alt"></i>,
-      href: "/",
+      href: "/dashboard",
     },
     {
       title: "Sales",
