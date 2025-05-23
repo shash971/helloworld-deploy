@@ -446,12 +446,199 @@ export default function LooseStock() {
             </DialogDescription>
           </DialogHeader>
           
-          <StockForm
-            type="loose"
-            defaultValues={editItem}
-            onSubmit={handleFormSubmit}
-            onCancel={handleFormCancel}
-          />
+          {/* Replace StockForm with direct implementation */}
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            
+            // Get form data directly from the form elements
+            const formData = new FormData(e.currentTarget);
+            const data = {
+              id: editItem ? editItem.id : stockData.length + 1,
+              itemCode: formData.get('itemCode') as string || `LS-${Math.floor(10000 + Math.random() * 90000)}`,
+              stoneType: formData.get('stoneType') as string || "Diamond",
+              shape: formData.get('shape') as string || "",
+              carat: parseFloat(formData.get('carat') as string) || 0,
+              color: formData.get('color') as string || "",
+              clarity: formData.get('clarity') as string || "",
+              cut: formData.get('cut') as string || "",
+              quantity: parseInt(formData.get('quantity') as string) || 1,
+              costPrice: parseFloat(formData.get('costPrice') as string) || 0,
+              sellingPrice: parseFloat(formData.get('sellingPrice') as string) || 0,
+              location: formData.get('location') as string || "Main Store",
+              notes: formData.get('notes') as string || "",
+              updatedBy: 1, // Current user
+              lastUpdated: new Date().toISOString()
+            };
+            
+            console.log("Saving data:", data);
+            
+            // Use the existing handler with our processed data
+            handleFormSubmit(data);
+          }} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Item Code */}
+              <div className="space-y-2">
+                <label htmlFor="itemCode" className="text-sm font-medium">Item Code</label>
+                <input 
+                  id="itemCode" 
+                  name="itemCode"
+                  defaultValue={editItem?.itemCode || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Stone Type */}
+              <div className="space-y-2">
+                <label htmlFor="stoneType" className="text-sm font-medium">Stone Type</label>
+                <select 
+                  id="stoneType" 
+                  name="stoneType" 
+                  defaultValue={editItem?.stoneType || "Diamond"}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Diamond">Diamond</option>
+                  <option value="Ruby">Ruby</option>
+                  <option value="Emerald">Emerald</option>
+                  <option value="Sapphire">Sapphire</option>
+                </select>
+              </div>
+              
+              {/* Shape */}
+              <div className="space-y-2">
+                <label htmlFor="shape" className="text-sm font-medium">Shape</label>
+                <select 
+                  id="shape" 
+                  name="shape" 
+                  defaultValue={editItem?.shape || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Round">Round</option>
+                  <option value="Princess">Princess</option>
+                  <option value="Cushion">Cushion</option>
+                  <option value="Oval">Oval</option>
+                  <option value="Emerald">Emerald</option>
+                  <option value="Pear">Pear</option>
+                </select>
+              </div>
+              
+              {/* Carat */}
+              <div className="space-y-2">
+                <label htmlFor="carat" className="text-sm font-medium">Carat Weight</label>
+                <input 
+                  id="carat" 
+                  name="carat" 
+                  type="number" 
+                  step="0.01"
+                  defaultValue={editItem?.carat || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Color */}
+              <div className="space-y-2">
+                <label htmlFor="color" className="text-sm font-medium">Color (Optional)</label>
+                <input 
+                  id="color" 
+                  name="color" 
+                  defaultValue={editItem?.color || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Clarity */}
+              <div className="space-y-2">
+                <label htmlFor="clarity" className="text-sm font-medium">Clarity (Optional)</label>
+                <input 
+                  id="clarity" 
+                  name="clarity" 
+                  defaultValue={editItem?.clarity || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Cut */}
+              <div className="space-y-2">
+                <label htmlFor="cut" className="text-sm font-medium">Cut (Optional)</label>
+                <input 
+                  id="cut" 
+                  name="cut" 
+                  defaultValue={editItem?.cut || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Quantity */}
+              <div className="space-y-2">
+                <label htmlFor="quantity" className="text-sm font-medium">Quantity</label>
+                <input 
+                  id="quantity" 
+                  name="quantity" 
+                  type="number" 
+                  defaultValue={editItem?.quantity || "1"}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Cost Price */}
+              <div className="space-y-2">
+                <label htmlFor="costPrice" className="text-sm font-medium">Cost Price (₹)</label>
+                <input 
+                  id="costPrice" 
+                  name="costPrice" 
+                  type="number"
+                  defaultValue={editItem?.costPrice || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Selling Price */}
+              <div className="space-y-2">
+                <label htmlFor="sellingPrice" className="text-sm font-medium">Selling Price (₹)</label>
+                <input 
+                  id="sellingPrice" 
+                  name="sellingPrice" 
+                  type="number"
+                  defaultValue={editItem?.sellingPrice || ""}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              
+              {/* Location */}
+              <div className="space-y-2">
+                <label htmlFor="location" className="text-sm font-medium">Location</label>
+                <select 
+                  id="location" 
+                  name="location" 
+                  defaultValue={editItem?.location || "Main Store"}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Main Store">Main Store</option>
+                  <option value="Safe">Safe</option>
+                  <option value="Display Case">Display Case</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Notes */}
+            <div className="space-y-2">
+              <label htmlFor="notes" className="text-sm font-medium">Notes (Optional)</label>
+              <textarea 
+                id="notes" 
+                name="notes" 
+                defaultValue={editItem?.notes || ""}
+                className="w-full p-2 border border-gray-300 rounded-md h-24"
+              ></textarea>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" type="button" onClick={handleFormCancel}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save Loose Stock
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
       
