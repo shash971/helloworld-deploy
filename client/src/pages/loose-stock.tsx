@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { StockTable } from "@/components/data-display/stock-table";
-import { StockForm } from "@/components/forms/stock-form";
+// Using direct form implementation instead of StockForm component
+// import { StockForm } from "@/components/forms/stock-form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
