@@ -1,6 +1,11 @@
 import pandas as pd
 import psycopg2
+import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Load Excel
 df = pd.read_excel("dashboard_data.xlsx", sheet_name="Sheet1")
@@ -17,10 +22,10 @@ def parse_date(val):
 
 # Connect to PostgreSQL
 conn = psycopg2.connect(
-    host="localhost",
-    dbname="finance_db",
-    user="postgres",
-    password="Finance123"
+    host=os.environ.get("DB_HOST", "localhost"),
+    dbname=os.environ.get("DB_NAME", "finance_db"),
+    user=os.environ.get("DB_USER", "postgres"),
+    password=os.environ.get("DB_PASSWORD")
 )
 cur = conn.cursor()
 
