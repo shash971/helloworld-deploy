@@ -388,6 +388,7 @@ export default function Purchase() {
   });
   
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("Form submitted with values:", values);
     setIsSubmitting(true);
     
     try {
@@ -811,7 +812,11 @@ export default function Purchase() {
               />
               
               <DialogFooter>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button 
+                  type="button" 
+                  disabled={isSubmitting}
+                  onClick={form.handleSubmit(onSubmit)}
+                >
                   {isSubmitting ? 'Saving...' : 'Save Purchase'}
                 </Button>
               </DialogFooter>
