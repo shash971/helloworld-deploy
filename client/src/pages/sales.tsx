@@ -13,6 +13,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import * as XLSX from 'xlsx';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { 
   Form, 
   FormControl, 
@@ -56,10 +62,152 @@ interface SaleItem {
 
 export default function Sales() {
   const [openDialog, setOpenDialog] = useState(false);
+  const [importDialog, setImportDialog] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importStatus, setImportStatus] = useState<'idle' | 'preview' | 'importing'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [salesData, setSalesData] = useState<SaleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Function to handle Excel/CSV file import
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setImportDialog(true);
+    setImportStatus('preview');
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const binaryStr = evt.target?.result;
+        const workbook = XLSX.read(binaryStr, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        console.log("Imported Excel data:", jsonData);
+        setImportData(jsonData);
+        
+        toast({
+          title: "Import Preview Ready",
+          description: `Found ${jsonData.length} records in the file. Please confirm to import.`,
+          variant: "default",
+        });
+      } catch (error) {
+        toast({
+          title: "Import Error",
+          description: "Failed to parse the Excel file. Please check the format.",
+          variant: "destructive",
+        });
+        console.error("Excel parsing error:", error);
+      }
+    };
+    
+    reader.onerror = () => {
+      toast({
+        title: "Import Error",
+        description: "Failed to read the file. Please try again.",
+        variant: "destructive",
+      });
+    };
+    
+    reader.readAsBinaryString(file);
+    
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+  
+  // Function to process the import data and save to backend
+  const processImport = async () => {
+    if (importData.length === 0) {
+      toast({
+        title: "Import Error",
+        description: "No data to import",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setImportStatus('importing');
+    
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Process each row in the imported data
+      for (const row of importData) {
+        try {
+          // Map Excel columns to our backend format
+          // Here we're making assumptions about the Excel format
+          // Adjust the field mappings to match your actual Excel structure
+          const saleData = {
+            date: row.date ? new Date(row.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            customer: row.customer || row.CustomerName || row.Customer || "",
+            iteam: row.item || row.Item || row.iteam || "Diamond Jewelry",
+            shape: row.shape || row.Shape || "Round",
+            size: row.size || row.Size || "Medium",
+            col: row.color || row.Color || row.col || "D",
+            clr: row.clarity || row.Clarity || row.clr || "VS1",
+            pcs: parseInt(row.pcs || row.Pieces || row.pieces || "1", 10),
+            lab_no: row.invoice || row.Invoice || row.lab_no || `SL-${Math.floor(70000 + Math.random() * 9000)}`,
+            rate: parseFloat(row.rate || row.Rate || row.amount || row.Amount || "0"),
+            total: parseFloat(row.total || row.Total || row.amount || row.Amount || "0"),
+            term: row.term || row.Term || "Net 30",
+            currency: row.currency || row.Currency || "INR",
+            pay_mode: row.status || row.Status || row.pay_mode || "Pending",
+            sales_executive: row.executive || row.Executive || row.sales_executive || "Admin",
+            remark: row.notes || row.Notes || row.remark || ""
+          };
+          
+          // Send to backend API
+          const response = await fetch(`${API_BASE_URL}/sales/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...getAuthHeader()
+            },
+            body: JSON.stringify(saleData)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+          
+          await response.json();
+          successCount++;
+        } catch (rowError) {
+          console.error("Error importing row:", row, rowError);
+          errorCount++;
+        }
+      }
+      
+      // Refresh the sales data
+      await fetchSales();
+      
+      // Show result toast
+      toast({
+        title: "Import Complete",
+        description: `Successfully imported ${successCount} records. ${errorCount > 0 ? `Failed to import ${errorCount} records.` : ''}`,
+        variant: errorCount > 0 ? "default" : "default",
+      });
+      
+      // Close the import dialog
+      setImportDialog(false);
+      setImportStatus('idle');
+      setImportData([]);
+      
+    } catch (error) {
+      console.error("Import process error:", error);
+      toast({
+        title: "Import Failed",
+        description: "An error occurred during the import process.",
+        variant: "destructive",
+      });
+      setImportStatus('preview');
+    }
+  };
   
   // Form setup
   const form = useForm<z.infer<typeof formSchema>>({
@@ -261,19 +409,7 @@ export default function Sales() {
               type="file"
               accept=".csv,.xlsx,.xls"
               className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  toast({
-                    title: "File Selected",
-                    description: `Selected file: ${file.name}. Import feature will be implemented soon.`,
-                    variant: "default",
-                  });
-                  
-                  // Reset the input so the same file can be selected again
-                  e.target.value = '';
-                }
-              }}
+              onChange={handleFileImport}
             />
           </label>
           <Button onClick={() => setOpenDialog(true)}>
@@ -447,6 +583,84 @@ export default function Sales() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Import Dialog */}
+      <Dialog open={importDialog} onOpenChange={setImportDialog}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Import Sales Data</DialogTitle>
+            <DialogDescription>
+              Review the data below before importing into the system.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {importStatus === 'preview' && importData.length > 0 && (
+            <div className="my-4">
+              <Alert className="mb-4">
+                <AlertTitle>Ready to Import {importData.length} Records</AlertTitle>
+                <AlertDescription>
+                  Please review the data below before confirming. The system will attempt to map columns automatically.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="border rounded-md overflow-auto max-h-[300px] mb-4">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      {Object.keys(importData[0]).slice(0, 6).map(key => (
+                        <th key={key} className="px-4 py-2 text-left font-medium">{key}</th>
+                      ))}
+                      {Object.keys(importData[0]).length > 6 && (
+                        <th className="px-4 py-2 text-left font-medium">...</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importData.slice(0, 5).map((row, index) => (
+                      <tr key={index} className="border-t">
+                        {Object.values(row).slice(0, 6).map((val, i) => (
+                          <td key={i} className="px-4 py-2">{String(val)}</td>
+                        ))}
+                        {Object.values(row).length > 6 && (
+                          <td className="px-4 py-2">...</td>
+                        )}
+                      </tr>
+                    ))}
+                    {importData.length > 5 && (
+                      <tr className="border-t">
+                        <td colSpan={7} className="px-4 py-2 text-center text-muted-foreground">
+                          + {importData.length - 5} more records
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setImportDialog(false);
+                  setImportData([]);
+                  setImportStatus('idle');
+                }}>
+                  Cancel
+                </Button>
+                <Button onClick={processImport} disabled={importStatus === 'importing'}>
+                  {importStatus === 'importing' ? 'Importing...' : 'Confirm Import'}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+          
+          {importStatus === 'importing' && (
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-lg font-medium">Importing Sales Data...</p>
+              <p className="text-sm text-muted-foreground">This may take a moment. Please don't close this window.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       {/* New Sale Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
