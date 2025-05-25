@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from config.db import Base, engine
+
+from backend_extract.config.db import Base, engine  # ✅ Fixed import
 from routes.auth_routes import router as auth_router
 from routes.dashboard import router as dashboard_router
 from routes.sales_routes import router as sales_router
