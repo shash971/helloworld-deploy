@@ -1,13 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Corrected path for db import
+# Correct paths for Render deployment
 from backend_extract.config.db import Base, engine
-
-# Route imports
-from routes.auth_routes import router as auth_router
-from routes.dashboard_routes import router as dashboard_router
-from routes.sales_routes import router as sales_router
+from backend_extract.routes.auth_routes import router as auth_router
+from backend_extract.routes.dashboard_routes import router as dashboard_router
+from backend_extract.routes.sales_routes import router as sales_router
 
 app = FastAPI()
 
