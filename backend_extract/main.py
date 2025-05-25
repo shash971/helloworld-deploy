@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config.db import Base, engine
+# Corrected path for db import
+from backend_extract.config.db import Base, engine
+
+# Route imports
 from routes.auth_routes import router as auth_router
-from routes.dashboard import router as dashboard_router
+from routes.dashboard_routes import router as dashboard_router
 from routes.sales_routes import router as sales_router
 
 app = FastAPI()
@@ -11,6 +14,7 @@ app = FastAPI()
 # Optional: Auto-create tables at startup
 Base.metadata.create_all(bind=engine)
 
+# Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,10 +23,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Routers
 app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(sales_router)
 
+# Root endpoint
 @app.get("/")
 def root():
     return {"message": "Welcome to the Finance API"}
